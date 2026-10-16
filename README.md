@@ -245,17 +245,48 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full authoring guidelines.
 
 ---
 
-## 🗺️ Project Roadmap (5-PR Execution Plan)
+## 🔄 Live Target Agent Evaluation Loop vs. Offline Simulation
 
-Chaos-Harness is developed in 5 sequential, focused Pull Requests:
+Chaos-Harness is designed to operate in two seamless modes:
 
-| PR # | Branch | Focus Area | Status |
+### 1. Live Dynamic Evaluation Loop (Real Target Agents)
+When testing a real LLM application or autonomous agent:
+1. **Adversarial Generation**: Gemma 4 crafts a stealthy, category-specific attack probe.
+2. **Real Target Execution**: The probe is dispatched directly to the real target agent under test via:
+   - **Google GenAI API** (`--live-target --target-model gemini-2.5-flash` or custom model)
+   - **External HTTP Webhook Endpoint** (`--target-url http://localhost:8000/v1/chat`)
+3. **Impartial Adjudication**: Gemma 4 Safety Judge analyzes the target's genuine response, categorizing vulnerabilities and assigning a quantitative risk score (0–100).
+4. **Autonomous Self-Healing (`--auto-heal`)**: Upon detecting a breach, Gemma 4 Auto-Hardener rewrites the system prompt with defense-in-depth boundaries.
+5. **Closed-Loop Verification**: The live target agent is reloaded with the hardened prompt and re-attacked with the exact same adversarial vector to verify that the vulnerability is closed.
+
+```bash
+# Live audit against a real target agent with automated self-healing
+python -m harness.cli --prompt "You are a banking support assistant..." --live-target --auto-heal
+
+# Black-box penetration testing against an external agent service over HTTP
+python -m harness.cli --prompt "..." --target-url "https://api.myagent.com/chat" --auto-heal
+```
+
+### 2. Zero-Cost Deterministic Offline Simulation (CI & Development)
+When running in CI/CD pipelines or offline development environments without API keys:
+- The harness falls back cleanly to deterministic mock heuristics.
+- All 5 Agent Skills, prompt hardening, and web dashboard run locally at zero cost with 100% reproducible results.
+- **57 automated tests** validate harness resilience across Python 3.10 through 3.13.
+
+---
+
+## 🗺️ Project Roadmap & Hacktoberfest Delivery
+
+| PR # | Branch / Component | Focus Area | Status |
 |:---:|---|---|:---:|
-| **PR 1** | `feat/repo-scaffolding` | MIT License, dependencies, contributing guidelines, PR template, comprehensive documentation | **Active** |
-| **PR 2** | `feat/gemma4-engine` | Core Gemma 4 engine with `google-genai` SDK, Pydantic schemas, and robust offline mock fallback | *Planned* |
-| **PR 3** | `feat/cli-runner` | Interactive Rich CLI runner, colorful vulnerability tables, and real-time audit reports | *Planned* |
-| **PR 4** | `feat/prompt-hardener` | Autonomous prompt hardening and self-healing system prompt synthesis | *Planned* |
-| **PR 5** | `feat/tests-and-ci` | Complete Pytest suite with mock verification and GitHub Actions CI workflow | *Planned* |
+| **PR 1** | `feat/repo-scaffolding` | MIT License, dependencies, contributor guidelines, PR template, 5 pillars architecture | **Merged** ✅ |
+| **PR 2** | `feat/gemma4-engine` | Core Gemma 4 engine (`google-genai`), Pydantic `SafetyEvaluation`, adversarial generation & safety evaluation | **Merged** ✅ |
+| **PR 3** | `feat/cli-runner` | Rich interactive terminal runner, colorful risk heatmaps, PASS/FAIL badges, and inconclusive judgment handling | **Merged** ✅ |
+| **PR 4** | `feat/prompt-hardener` | Autonomous prompt hardening (`harden_prompt`) and closed-loop self-healing (`run_self_healing_cycle`) | **Merged** ✅ |
+| **PR 5** | `feat/tests-and-ci` | Automated GitHub Actions CI workflow (Python 3.10–3.13) and comprehensive test suite | **Merged** ✅ |
+| **PR 6–11** | `skills/*` | 5 Extensible Agent Skills under `SKILL.md`: `injection-fuzzer`, `schema-breaker`, `hallucination-trap`, `auto-hardener`, `pii-leak-prober` | **Merged** ✅ |
+| **PR 12** | `deploy_and_benchmarks` | Multi-provider inference router, standardized vulnerable targets benchmark suite, and 1-command hackathon demo | **Merged** ✅ |
+| **PR 13** | `dashboard-core` | Full zero-dependency visual web dashboard, real-time safety radar, and REST API | **Merged** ✅ |
 
 ---
 

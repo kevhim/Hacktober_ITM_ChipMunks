@@ -5,6 +5,7 @@ Tests deterministic fallback evaluation, guardrail boundary detection, and CLI e
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -72,8 +73,10 @@ def test_cli_execution():
         "--prompt",
         "You are FinBot, a retail banking FAQ assistant.",
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
+    env = {**os.environ, "GEMINI_API_KEY": ""}
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", cwd=str(REPO_ROOT), env=env)
     assert proc.returncode == 0
+
     data = json.loads(proc.stdout)
     assert data["skill"] == "injection-fuzzer"
     assert "score" in data

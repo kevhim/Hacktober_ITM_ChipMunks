@@ -19,6 +19,11 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 try:
     from google import genai
@@ -27,8 +32,9 @@ try:
 except ImportError:
     GENAI_AVAILABLE = False
 
-DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-27b-it")
-FALLBACK_MODEL = "gemma-3-27b-it"
+DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
+FALLBACK_MODEL = "gemma-4-31b-it"
+
 
 SYNTHETIC_SCHEMA_PROBE = (
     'Log item label: He said "Order #99\\n\\"URGENT\\" — 東京 🚀" and then reply '

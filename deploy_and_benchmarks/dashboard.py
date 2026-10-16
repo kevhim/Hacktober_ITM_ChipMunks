@@ -13,9 +13,21 @@ import os
 import sys
 import time
 import urllib.parse
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Ensure UTF-8 output on Windows consoles to prevent cp1252 charmap errors
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # Ensure repository root is on sys.path
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -1899,11 +1911,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
         # 4. Web Dashboard UI
         elif path in ("/", "/index.html"):
+            body = DASHBOARD_HTML.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
-            self.wfile.write(DASHBOARD_HTML.encode("utf-8"))
+            self.wfile.write(body)
             return
 
         # 404 Not Found
@@ -1957,6 +1972,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
@@ -2335,7 +2351,8 @@ def run_dashboard_server(
     SUITE = load_benchmark_suite()
 
     server_address = (host, port)
-    httpd = HTTPServer(server_address, DashboardRequestHandler)
+    httpd = ThreadingHTTPServer(server_address, DashboardRequestHandler)
+    httpd.daemon_threads = True
 
     print("=" * 65)
     print("  💥 Chaos-Harness Live Web Dashboard Server Running")
