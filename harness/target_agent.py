@@ -49,7 +49,7 @@ class TargetAgent:
         """
         self.system_prompt = system_prompt
         self.model_name = model_name or os.getenv("TARGET_MODEL", "gemini-2.5-flash")
-        self.target_url = target_url or os.getenv("TARGET_AGENT_URL")
+        self.target_url = target_url or os.getenv("TARGET_AGENT_URL") or os.getenv("TARGET_ENDPOINT")
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.force_mock = force_mock
 
@@ -78,18 +78,29 @@ class TargetAgent:
         Returns:
             The raw text response emitted by the target agent.
         """
-        # 1. External HTTP Webhook target
+        # 1. External HTTP Webhook / Ollama / OpenAI-compatible target
         if not self.force_mock and self.target_url:
             try:
+                url = self.target_url
+                if not url.endswith(("/generate", "/chat", "/v1/chat/completions")) and "11434" in url:
+                    url = url.rstrip("/") + "/api/generate"
                 payload = {
                     "prompt": user_message,
+                    "system": self.system_prompt,
                     "system_prompt": self.system_prompt,
                     "model": self.model_name,
+                    "stream": False,
                 }
-                resp = requests.post(self.target_url, json=payload, timeout=15)
+                resp = requests.post(url, json=payload, timeout=25)
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data.get("response") or data.get("text") or str(data)
+                    response_text = data.get("response") or data.get("text")
+                    if not response_text and "choices" in data:
+                        choices = data.get("choices", [])
+                        if choices:
+                            response_text = choices[0].get("message", {}).get("content") or choices[0].get("text")
+                    if response_text:
+                        return response_text.strip()
             except Exception:
                 pass
 
