@@ -55,26 +55,40 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <title>Chaos-Harness | Red-Teaming & Self-Healing Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #0a0d14;
-      --bg-card: rgba(18, 24, 38, 0.75);
-      --bg-card-hover: rgba(26, 35, 54, 0.85);
-      --border-color: rgba(255, 255, 255, 0.08);
-      --border-focus: rgba(66, 133, 244, 0.5);
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --primary-blue: #4285f4;
-      --accent-cyan: #06b6d4;
-      --danger-red: #ef4444;
-      --danger-bg: rgba(239, 68, 68, 0.12);
-      --success-green: #10b981;
-      --success-bg: rgba(16, 185, 129, 0.12);
-      --warning-amber: #f59e0b;
-      --radius: 12px;
-      --radius-sm: 8px;
+      --bg-base: #090b10;
+      --bg-surface: #11141c;
+      --bg-surface-elevated: #161a25;
+      --bg-surface-subtle: #0d1017;
+      
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.15);
+      --border-focus: rgba(99, 102, 241, 0.5);
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-tertiary: #64748b;
+      --text-code: #cbd5e1;
+
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-subtle: rgba(99, 102, 241, 0.08);
+
+      --danger: #f43f5e;
+      --danger-subtle: rgba(244, 63, 94, 0.08);
+      --danger-border: rgba(244, 63, 94, 0.25);
+      --danger-text: #fda4af;
+
+      --success: #10b981;
+      --success-subtle: rgba(16, 185, 129, 0.08);
+      --success-border: rgba(16, 185, 129, 0.25);
+      --success-text: #6ee7b7;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
     }
 
     * {
@@ -84,27 +98,28 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     body {
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(circle at 15% 15%, rgba(66, 133, 244, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.06) 0%, transparent 40%);
-      color: var(--text-main);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+      -webkit-font-smoothing: antialiased;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      line-height: 1.5;
     }
 
+    /* Minimalist Top Navigation Header */
     header {
-      background: rgba(10, 13, 20, 0.8);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border-color);
+      background: rgba(9, 11, 16, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
       position: sticky;
       top: 0;
       z-index: 100;
-      padding: 1rem 2rem;
+      padding: 0.85rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -116,214 +131,248 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       gap: 0.75rem;
     }
 
-    .brand-icon {
-      font-size: 1.5rem;
-      background: linear-gradient(135deg, #ef4444, #f59e0b);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #1e2230, #11141c);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
     }
 
     .brand-title {
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: 1.05rem;
+      font-weight: 600;
       letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .brand-subtitle {
+      font-weight: 300;
+      color: var(--text-tertiary);
+      margin-left: 0.2rem;
     }
 
     .brand-tag {
-      font-size: 0.75rem;
-      background: rgba(66, 133, 244, 0.15);
-      color: #93c5fd;
-      border: 1px solid rgba(66, 133, 244, 0.3);
-      padding: 0.2rem 0.5rem;
+      font-size: 0.7rem;
+      background: var(--accent-subtle);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      padding: 0.15rem 0.55rem;
       border-radius: 9999px;
-      font-weight: 600;
+      font-weight: 500;
+      letter-spacing: 0.02em;
     }
 
     .header-status {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
+      gap: 0.75rem;
     }
 
     .status-pill {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-color);
-      padding: 0.4rem 0.8rem;
+      gap: 0.45rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 0.35rem 0.75rem;
       border-radius: 9999px;
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 500;
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
-      background-color: var(--success-green);
+      width: 6px;
+      height: 6px;
+      background-color: var(--success);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--success-green);
-      animation: pulse-dot 2s infinite;
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+      animation: pulse-dot 2.5s infinite ease-in-out;
     }
 
     @keyframes pulse-dot {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.85); }
+      50% { opacity: 0.4; transform: scale(0.9); }
     }
 
     main {
       flex: 1;
-      max-width: 1400px;
+      max-width: 1320px;
       width: 100%;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 1.75rem 2rem 3rem 2rem;
       display: flex;
       flex-direction: column;
-      gap: 2rem;
+      gap: 1.5rem;
     }
 
-    .hero-banner {
-      background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 1.75rem;
+    /* Minimal Hero & Target Selector Toolbar */
+    .hero-toolbar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      gap: 1.5rem;
+      padding-bottom: 0.5rem;
     }
 
     .hero-info h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
+      font-size: 1.35rem;
+      font-weight: 600;
       letter-spacing: -0.02em;
-      margin-bottom: 0.35rem;
-      background: linear-gradient(90deg, #ffffff, #94a3b8);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--text-primary);
     }
 
     .hero-info p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
     }
 
     .selector-container {
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      min-width: 340px;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .selector-label {
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 0.75rem;
+      font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--text-dim);
+      color: var(--text-tertiary);
+      white-space: nowrap;
     }
 
     select.target-dropdown {
-      background: #0f1523;
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 0.75rem 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 0.6rem 1rem;
       border-radius: var(--radius-sm);
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       font-family: inherit;
       outline: none;
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      min-width: 300px;
+      transition: all 0.15s ease;
     }
 
     select.target-dropdown:focus {
-      border-color: var(--primary-blue);
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.25);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
     }
 
+    select.target-dropdown:hover {
+      border-color: var(--border-hover);
+    }
+
+    /* Layout Grids */
     .grid-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.75rem;
+      gap: 1.5rem;
     }
 
     @media (max-width: 1024px) {
       .grid-layout {
         grid-template-columns: 1fr;
       }
-      .hero-banner {
+      .hero-toolbar {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1.25rem;
+        gap: 1rem;
       }
       .selector-container {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      select.target-dropdown {
         width: 100%;
       }
     }
 
+    /* Minimalist Elegant Card Component */
     .card {
-      background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 1.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.4rem;
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      gap: 1.15rem;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
       transition: border-color 0.2s ease;
     }
 
     .card:hover {
-      border-color: rgba(255, 255, 255, 0.15);
+      border-color: var(--border-hover);
     }
 
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 0.75rem;
     }
 
     .card-title {
-      font-size: 1.05rem;
+      font-size: 0.925rem;
       font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.55rem;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
     }
 
+    .card-title svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--text-secondary);
+    }
+
+    /* Minimalist Status Badges */
     .badge {
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.25rem 0.6rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.2rem 0.55rem;
       border-radius: 9999px;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
     }
 
     .badge-danger {
-      background: var(--danger-bg);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      background: var(--danger-subtle);
+      color: var(--danger-text);
+      border: 1px solid var(--danger-border);
     }
 
     .badge-domain {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-muted);
-      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
     }
 
     .badge-success {
-      background: var(--success-bg);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: var(--success-subtle);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
     }
 
+    .badge-primary {
+      background: var(--accent-subtle);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+
+    /* Target Meta Details */
     .target-meta-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -331,36 +380,37 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     .meta-item {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-color);
-      padding: 0.75rem;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      padding: 0.65rem 0.85rem;
       border-radius: var(--radius-sm);
     }
 
     .meta-title {
-      font-size: 0.7rem;
-      color: var(--text-dim);
+      font-size: 0.68rem;
+      color: var(--text-tertiary);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.25rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.2rem;
+      font-weight: 500;
     }
 
     .meta-value {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 500;
-      color: var(--text-main);
+      color: var(--text-primary);
     }
 
     .prompt-editor-container {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.45rem;
     }
 
     .editor-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -368,23 +418,23 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     textarea.prompt-textarea {
       width: 100%;
-      height: 180px;
-      background: #090d16;
-      border: 1px solid var(--border-color);
+      height: 170px;
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-sm);
       padding: 0.85rem;
-      color: #e2e8f0;
+      color: var(--text-code);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      line-height: 1.5;
+      font-size: 0.8rem;
+      line-height: 1.6;
       resize: vertical;
       outline: none;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
 
     textarea.prompt-textarea:focus {
-      border-color: var(--border-focus);
-      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
     }
 
     /* Attack Studio Controls */
@@ -395,397 +445,138 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     .pill-btn {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 0.35rem 0.75rem;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.3rem 0.7rem;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
+      font-family: inherit;
     }
 
     .pill-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-main);
+      border-color: var(--border-hover);
+      color: var(--text-primary);
     }
 
     .pill-btn.active {
-      background: rgba(239, 68, 68, 0.2);
-      border-color: rgba(239, 68, 68, 0.5);
-      color: #fca5a5;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+      background: var(--danger-subtle);
+      border-color: var(--danger-border);
+      color: var(--danger-text);
+    }
+
+    /* Minimal Action Buttons */
+    .btn-action {
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      transition: all 0.15s ease;
+      width: 100%;
+      font-family: inherit;
+    }
+
+    .btn-action:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .btn-action:disabled,
+    .btn-action:disabled:hover {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none;
+      filter: grayscale(0.5);
     }
 
     .btn-attack {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
+      background: #e11d48;
       color: #ffffff;
-      border: none;
-      padding: 0.85rem 1.25rem;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 0.95rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
-      width: 100%;
-    }
-
-    .btn-attack:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-      filter: brightness(1.08);
-    }
-
-    .btn-attack:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
     }
 
     .btn-judge {
-      background: linear-gradient(135deg, #4285f4, #2563eb);
+      background: #4f46e5;
       color: #ffffff;
-      border: none;
-      padding: 0.85rem 1.25rem;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 0.95rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.35);
-      width: 100%;
     }
 
-    .btn-judge:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(66, 133, 244, 0.5);
-      filter: brightness(1.08);
-    }
-
-    .btn-judge:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Auto-Hardener Button & Diff Styles */
     .btn-harden {
-      background: linear-gradient(135deg, #10b981, #059669);
+      background: #059669;
       color: #ffffff;
-      border: none;
-      padding: 0.9rem 1.5rem;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
-      width: 100%;
     }
 
-    .btn-harden:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
-      filter: brightness(1.08);
-    }
-
-    .btn-harden:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Feature 5: Verification & Victory Styles */
     .btn-verify {
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      background: #2563eb;
       color: #ffffff;
-      border: none;
-      padding: 0.95rem 1.5rem;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 18px rgba(59, 130, 246, 0.35);
-      width: 100%;
     }
 
-    .btn-verify:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5);
-      filter: brightness(1.08);
-    }
-
-    .btn-verify:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .comparison-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    .comparison-table {
-      width: 100%;
-      border-collapse: collapse;
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      font-size: 0.85rem;
-      border: 1px solid var(--border-color);
-    }
-
-    .comparison-table th {
-      background: rgba(0, 0, 0, 0.35);
-      padding: 0.75rem 1rem;
-      text-align: left;
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .comparison-table td {
-      padding: 0.85rem 1rem;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .export-actions {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-
-    .btn-export {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 0.65rem 1.25rem;
-      border-radius: var(--radius-sm);
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
-    }
-
-    .btn-export:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: var(--primary-blue);
-      color: #93c5fd;
-    }
-
-    .btn-apply {
-      background: rgba(16, 185, 129, 0.15);
-      color: #6ee7b7;
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      padding: 0.6rem 1.25rem;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
-      margin-top: 0.5rem;
-    }
-
-    .btn-apply:hover {
-      background: rgba(16, 185, 129, 0.25);
-      border-color: var(--success-green);
-    }
-
-    .diff-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem;
-    }
-
-    @media (max-width: 900px) {
-      .diff-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .diff-column {
-      background: rgba(0, 0, 0, 0.25);
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .diff-column.vulnerable {
-      border: 1px solid rgba(239, 68, 68, 0.35);
-      background: rgba(239, 68, 68, 0.04);
-    }
-
-    .diff-column.hardened {
-      border: 1px solid rgba(16, 185, 129, 0.45);
-      background: rgba(16, 185, 129, 0.04);
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
-    }
-
-    .diff-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .diff-content {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 220px;
-      overflow-y: auto;
-      padding: 0.75rem;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: var(--radius-sm);
-    }
-
-    .diff-column.vulnerable .diff-content {
-      color: #fca5a5;
-    }
-
-    .diff-column.hardened .diff-content {
-      color: #6ee7b7;
-    }
-
-    .rules-container {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-
-    .rules-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .rules-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .rule-item {
-      font-size: 0.8rem;
-      color: #94a3b8;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .rule-item::before {
-      content: "✓";
-      color: var(--success-green);
-      font-weight: bold;
-    }
-
-    .attack-box {
-      background: rgba(239, 68, 68, 0.04);
-      border: 1px solid rgba(239, 68, 68, 0.25);
+    /* Payload and Response Displays */
+    .attack-box, .response-box {
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-sm);
       padding: 0.85rem;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .response-box {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm);
-      padding: 0.85rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.45rem;
     }
 
     .response-box.compromised {
-      border-color: rgba(239, 68, 68, 0.4);
-      background: rgba(239, 68, 68, 0.06);
+      border-color: var(--danger-border);
+      background: var(--danger-subtle);
     }
 
     .box-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      color: var(--text-dim);
+      color: var(--text-tertiary);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
     .code-display {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      line-height: 1.45;
-      color: #fca5a5;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      color: var(--danger-text);
       white-space: pre-wrap;
       word-break: break-word;
-      max-height: 120px;
+      max-height: 130px;
       overflow-y: auto;
     }
 
     .response-display {
       font-family: inherit;
-      font-size: 0.85rem;
-      line-height: 1.45;
-      color: #e2e8f0;
+      font-size: 0.825rem;
+      line-height: 1.55;
+      color: var(--text-primary);
       white-space: pre-wrap;
       word-break: break-word;
-      max-height: 120px;
+      max-height: 130px;
       overflow-y: auto;
     }
 
-    /* Safety Radar & Risk Gauges */
+    /* Minimalist Safety Radar & Gauge */
     .radar-container {
       display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 1.75rem;
+      grid-template-columns: 160px 1fr;
+      gap: 2rem;
       align-items: center;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-color);
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
       border-radius: var(--radius-sm);
-      padding: 1.25rem;
+      padding: 1.25rem 1.5rem;
     }
 
     @media (max-width: 768px) {
@@ -797,8 +588,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     .gauge-wrapper {
       position: relative;
-      width: 140px;
-      height: 140px;
+      width: 120px;
+      height: 120px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -807,24 +598,24 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     .gauge-svg {
       transform: rotate(-90deg);
-      width: 140px;
-      height: 140px;
+      width: 120px;
+      height: 120px;
     }
 
     .gauge-bg {
       fill: none;
-      stroke: rgba(255, 255, 255, 0.08);
-      stroke-width: 10;
+      stroke: rgba(255, 255, 255, 0.06);
+      stroke-width: 6;
     }
 
     .gauge-progress {
       fill: none;
-      stroke: var(--danger-red);
-      stroke-width: 10;
+      stroke: var(--danger);
+      stroke-width: 6;
       stroke-linecap: round;
       stroke-dasharray: 339.292;
       stroke-dashoffset: 339.292;
-      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.4s ease;
     }
 
     .gauge-content {
@@ -836,26 +627,27 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     .gauge-number {
-      font-size: 2.25rem;
-      font-weight: 800;
+      font-size: 2rem;
+      font-weight: 700;
       line-height: 1;
       letter-spacing: -0.03em;
-      color: var(--danger-red);
-      transition: color 0.5s ease;
+      color: var(--danger);
+      transition: color 0.4s ease;
     }
 
     .gauge-label {
       font-size: 0.65rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-dim);
-      margin-top: 0.2rem;
+      letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+      margin-top: 0.25rem;
+      font-weight: 500;
     }
 
     .breakdown-bars {
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.65rem;
       width: 100%;
     }
 
@@ -869,13 +661,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       display: flex;
       justify-content: space-between;
       font-size: 0.75rem;
-      color: var(--text-muted);
+      color: var(--text-secondary);
+      font-weight: 500;
     }
 
     .bar-track {
       width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.08);
+      height: 4px;
+      background: rgba(255, 255, 255, 0.06);
       border-radius: 9999px;
       overflow: hidden;
     }
@@ -883,60 +676,261 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .bar-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, #ef4444, #f87171);
+      background: var(--danger);
       border-radius: 9999px;
-      transition: width 1s ease-in-out;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .diagnostic-panel {
-      background: rgba(239, 68, 68, 0.08);
-      border-left: 3px solid var(--danger-red);
+      background: var(--danger-subtle);
+      border: 1px solid var(--danger-border);
       padding: 0.85rem 1rem;
-      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .diagnostic-panel.pass {
+      background: var(--success-subtle);
+      border-color: var(--success-border);
+    }
+
+    .diag-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .diag-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    /* Minimalist Side-by-Side Diff */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 900px) {
+      .diff-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diff-column {
+      background: var(--bg-surface-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .diff-column.vulnerable {
+      border-color: var(--danger-border);
+      background: var(--danger-subtle);
+    }
+
+    .diff-column.hardened {
+      border-color: var(--success-border);
+      background: var(--success-subtle);
+    }
+
+    .diff-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.725rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .diff-content {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.775rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 0.75rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-sm);
+    }
+
+    .diff-column.vulnerable .diff-content {
+      color: var(--danger-text);
+    }
+
+    .diff-column.hardened .diff-content {
+      color: var(--success-text);
+    }
+
+    .rules-container {
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .rules-title {
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .rules-list {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
     }
 
-    .diagnostic-panel.pass {
-      background: rgba(16, 185, 129, 0.08);
-      border-left-color: var(--success-green);
-    }
-
-    .diag-title {
+    .rule-item {
       font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text-main);
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
     }
 
-    .diag-desc {
+    .rule-item::before {
+      content: "•";
+      color: var(--success);
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .btn-apply {
+      background: var(--success-subtle);
+      color: var(--success-text);
+      border: 1px solid var(--success-border);
+      padding: 0.6rem 1rem;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+      font-size: 0.825rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      transition: all 0.15s ease;
+      margin-top: 0.35rem;
+      font-family: inherit;
+    }
+
+    .btn-apply:hover {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--success);
+    }
+
+    /* Comparison Table & Verification */
+    .comparison-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      font-size: 0.825rem;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .comparison-table th {
+      background: var(--bg-surface-subtle);
+      padding: 0.7rem 1rem;
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .comparison-table td {
+      padding: 0.8rem 1rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .export-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-export {
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.55rem 1rem;
+      border-radius: var(--radius-sm);
       font-size: 0.8rem;
-      color: var(--text-muted);
-      line-height: 1.4;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn-export:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
     }
 
     footer {
-      border-top: 1px solid var(--border-color);
+      border-top: 1px solid var(--border-subtle);
       padding: 1.25rem 2rem;
-      background: rgba(10, 13, 20, 0.5);
+      background: var(--bg-base);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.8rem;
-      color: var(--text-dim);
+      font-size: 0.775rem;
+      color: var(--text-tertiary);
     }
 
     .footer-links a {
-      color: var(--text-muted);
+      color: var(--text-secondary);
       text-decoration: none;
-      transition: color 0.2s;
+      transition: color 0.15s;
     }
 
     .footer-links a:hover {
-      color: var(--primary-blue);
+      color: var(--text-primary);
+    }
+
+    /* Minimalist Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
   </style>
 </head>
@@ -944,9 +938,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
   <header>
     <div class="brand">
-      <span class="brand-icon">💥</span>
-      <span class="brand-title">Chaos-Harness</span>
-      <span class="brand-tag">Gemma 4 Studio</span>
+      <div class="brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div>
+        <span class="brand-title">Chaos</span><span class="brand-subtitle">Harness</span>
+      </div>
+      <span class="brand-tag">Gemma 4</span>
     </div>
     <div class="header-status">
       <div class="status-pill">
@@ -954,20 +954,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <span id="providerStatus">Engine: Gemma 4 (gemma-4-27b-it)</span>
       </div>
       <div class="status-pill">
-        <span>Standard: agentskills.io</span>
+        <span>agentskills.io</span>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Hero / Target Selection -->
-    <section class="hero-banner">
+    <!-- Minimalist Target Selector Toolbar -->
+    <section class="hero-toolbar">
       <div class="hero-info">
-        <h1>Adversarial Red-Teaming & Self-Healing Studio</h1>
+        <h1>Adversarial Stress-Testing & Self-Healing</h1>
         <p>Stress-test vulnerable system prompts and autonomously synthesize defense-in-depth instructions using Google Gemma 4.</p>
       </div>
       <div class="selector-container">
-        <label for="targetSelect" class="selector-label">Select Evaluation Target</label>
+        <label for="targetSelect" class="selector-label">Target Evaluation Model</label>
         <select id="targetSelect" class="target-dropdown">
           <option value="" disabled selected>Loading benchmark targets...</option>
         </select>
@@ -981,7 +981,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <section class="card" id="targetProfileCard">
         <div class="card-header">
           <div class="card-title">
-            <span>🎯</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+            </svg>
             <span id="displayTargetName">Target Profile</span>
           </div>
           <span class="badge badge-danger" id="displayRiskCategory">Vulnerability</span>
@@ -1000,23 +1002,25 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
         <div class="meta-item">
           <div class="meta-title">Vulnerability Diagnosis</div>
-          <div class="meta-value" id="displayVulnerability" style="font-weight: 400; line-height: 1.4;">-</div>
+          <div class="meta-value" id="displayVulnerability" style="font-weight: 400; line-height: 1.45;">-</div>
         </div>
 
         <div class="prompt-editor-container">
           <div class="editor-label">
-            <span>Active System Prompt (Editable)</span>
-            <span style="font-size: 0.75rem; color: var(--text-dim);" id="charCount">0 chars</span>
+            <span>System Prompt (Editable Baseline)</span>
+            <span style="font-size: 0.725rem; color: var(--text-tertiary);" id="charCount">0 chars</span>
           </div>
           <textarea id="promptTextarea" class="prompt-textarea" placeholder="System prompt under evaluation..."></textarea>
         </div>
       </section>
 
-      <!-- Right Column: Adversarial Attack Studio (Feature 2) -->
+      <!-- Right Column: Adversarial Attack Studio -->
       <section class="card" id="attackStudioCard">
         <div class="card-header">
           <div class="card-title">
-            <span>⚔️</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
             <span>Adversarial Attack Studio</span>
           </div>
           <span class="badge badge-danger" id="attackStatusBadge">Ready to Attack</span>
@@ -1024,27 +1028,26 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
         <!-- Category Selector Pills -->
         <div class="prompt-editor-container">
-          <div class="editor-label">Select Attack Vector Domain</div>
+          <div class="editor-label">Attack Vector Domain</div>
           <div class="category-pills" id="categoryPills">
-            <button class="pill-btn active" data-category="AUTO">⚡ Auto-Detected</button>
-            <button class="pill-btn" data-category="PROMPT_INJECTION">💉 Prompt Injection</button>
-            <button class="pill-btn" data-category="PII_LEAKAGE">🔓 PII Phishing</button>
-            <button class="pill-btn" data-category="SCHEMA_VIOLATION">💥 Schema Breaker</button>
-            <button class="pill-btn" data-category="HALLUCINATION">🌀 Hallucination Trap</button>
+            <button class="pill-btn active" data-category="AUTO">Auto-Detected</button>
+            <button class="pill-btn" data-category="PROMPT_INJECTION">Prompt Injection</button>
+            <button class="pill-btn" data-category="PII_LEAKAGE">PII Phishing</button>
+            <button class="pill-btn" data-category="SCHEMA_VIOLATION">Schema Breaker</button>
+            <button class="pill-btn" data-category="HALLUCINATION">Hallucination Trap</button>
           </div>
         </div>
 
         <!-- Attack Trigger Button -->
-        <button id="btnLaunchAttack" class="btn-attack" onclick="launchAttack()">
-          <span>⚔️</span>
+        <button id="btnLaunchAttack" class="btn-action btn-attack" onclick="launchAttack()">
           <span>Launch Gemma 4 Adversarial Attack</span>
         </button>
 
         <!-- Adversarial Payload Box -->
         <div class="attack-box" id="attackBox">
           <div class="box-header">
-            <span>⚔️ Gemma 4 Adversarial Payload</span>
-            <span id="payloadLatency" style="font-weight: normal; color: var(--text-muted);">-</span>
+            <span>Gemma 4 Adversarial Payload</span>
+            <span id="payloadLatency" style="font-weight: normal; color: var(--text-tertiary);">-</span>
           </div>
           <div class="code-display" id="attackPayloadDisplay">Select a target and click 'Launch Gemma 4 Adversarial Attack' to generate a safety evaluation probe.</div>
         </div>
@@ -1052,8 +1055,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- Target Compromised Response Box -->
         <div class="response-box compromised" id="responseBox">
           <div class="box-header">
-            <span>🚨 Vulnerable Bot Response (Under Attack)</span>
-            <span class="badge badge-danger" id="compromiseBadge">Pre-Hardening</span>
+            <span>Vulnerable Response (Pre-Hardening)</span>
+            <span class="badge badge-danger" id="compromiseBadge">Compromised</span>
           </div>
           <div class="response-display" id="targetResponseDisplay">Target assistant has not been attacked yet.</div>
         </div>
@@ -1061,19 +1064,20 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     </div>
 
-    <!-- Feature 3: Safety Radar & Risk Score Adjudication -->
+    <!-- Safety Radar & Risk Score Adjudication -->
     <section class="card" id="safetyRadarCard">
       <div class="card-header">
         <div class="card-title">
-          <span>📊</span>
-          <span>Gemma 4 Safety Radar & Adjudication</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20v-6M6 20V10M18 20V4"/>
+          </svg>
+          <span>Safety Radar & Adjudication</span>
         </div>
-        <span class="badge badge-danger" id="radarStatusBadge">Adjudication Pending</span>
+        <span class="badge badge-domain" id="radarStatusBadge">Awaiting Attack</span>
       </div>
 
       <!-- Judge Button -->
-      <button id="btnJudgeSafety" class="btn-judge" onclick="judgeSafety()">
-        <span>⚖️</span>
+      <button id="btnJudgeSafety" class="btn-action btn-judge" onclick="judgeSafety()" disabled title="Prerequisite: Launch an adversarial attack first">
         <span>Adjudicate Safety with Gemma 4 Judge</span>
       </button>
 
@@ -1138,26 +1142,26 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <!-- Diagnostic Alert Box -->
       <div class="diagnostic-panel" id="diagnosticPanel">
         <div class="diag-title" id="diagTitle">
-          <span>⚠️</span>
           <span>Awaiting Adjudication</span>
         </div>
         <div class="diag-desc" id="diagDesc">Launch an attack above, then click 'Adjudicate Safety with Gemma 4 Judge' to analyze vulnerability metrics.</div>
       </div>
     </section>
 
-    <!-- Feature 4: Autonomous Prompt Auto-Hardener & Side-by-Side Diff -->
+    <!-- Autonomous Prompt Auto-Hardener & Side-by-Side Diff -->
     <section class="card" id="autoHardenerCard">
       <div class="card-header">
         <div class="card-title">
-          <span>🛡️</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
           <span>Autonomous Prompt Auto-Hardener & Diff Inspector</span>
         </div>
-        <span class="badge badge-success" id="hardenerStatusBadge">Self-Healing Ready</span>
+        <span class="badge badge-domain" id="hardenerStatusBadge">Awaiting Adjudication</span>
       </div>
 
       <!-- Action Button -->
-      <button id="btnAutoHarden" class="btn-harden" onclick="autoHardenPrompt()">
-        <span>🛡️</span>
+      <button id="btnAutoHarden" class="btn-action btn-harden" onclick="autoHardenPrompt()" disabled title="Prerequisite: Adjudicate safety with judge first">
         <span>Auto-Harden System Prompt with Gemma 4</span>
       </button>
 
@@ -1166,7 +1170,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- Left: Vulnerable Prompt -->
         <div class="diff-column vulnerable">
           <div class="diff-header">
-            <span>⚠️ Original Vulnerable System Prompt</span>
+            <span>Original Vulnerable Baseline</span>
             <span class="badge badge-danger">Compromised</span>
           </div>
           <div class="diff-content" id="diffOriginalPrompt">Click 'Auto-Harden System Prompt with Gemma 4' to synthesize defense-in-depth rules.</div>
@@ -1175,7 +1179,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- Right: Hardened Directives -->
         <div class="diff-column hardened">
           <div class="diff-header">
-            <span>🛡️ Gemma 4 Hardened Directives (Defensive)</span>
+            <span>Gemma 4 Hardened Directives</span>
             <span class="badge badge-success" id="hardenedBadge">Protected</span>
           </div>
           <div class="diff-content" id="diffHardenedPrompt">Hardened directives will be synthesized and displayed here.</div>
@@ -1184,37 +1188,38 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       <!-- Defensive Rules Added Checklist -->
       <div class="rules-container" id="rulesContainer" style="display: none;">
-        <div class="rules-title">🛡️ Defense-in-Depth Guardrails Synthesized by Gemma 4:</div>
+        <div class="rules-title">Synthesized Defensive Guardrails:</div>
         <div class="rules-list" id="rulesList"></div>
         <button id="btnApplyHardened" class="btn-apply" onclick="applyHardenedPrompt()">
-          <span>📥 Apply Hardened Directives to Active Prompt</span>
+          <span>Apply Hardened Directives to Active Prompt</span>
         </button>
       </div>
     </section>
 
-    <!-- Feature 5: Dual-Loop Verification & Victory Showcase -->
+    <!-- Dual-Loop Verification & Victory Showcase -->
     <section class="card" id="verificationCard">
       <div class="card-header">
         <div class="card-title">
-          <span>🏆</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
           <span>Dual-Loop Verification & Victory Scorecard</span>
         </div>
-        <span class="badge badge-domain" id="verifyStatusBadge">Verification Pending</span>
+        <span class="badge badge-domain" id="verifyStatusBadge">Awaiting Hardening</span>
       </div>
 
       <!-- Action Button -->
-      <button id="btnVerifyHardened" class="btn-verify" onclick="verifyHardenedPrompt()">
-        <span>🏆</span>
+      <button id="btnVerifyHardened" class="btn-action btn-verify" onclick="verifyHardenedPrompt()" disabled title="Prerequisite: Auto-harden system prompt first">
         <span>Re-Test Attack on Hardened Assistant (Dual-Loop Close)</span>
       </button>
 
       <!-- Deflection Response Box -->
-      <div class="response-box" id="hardenedResponseBox" style="display: none; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05);">
+      <div class="response-box" id="hardenedResponseBox" style="display: none; border-color: var(--success-border); background: var(--success-subtle);">
         <div class="box-header">
-          <span style="color: #6ee7b7;">🛡️ Hardened Assistant Response (Attack Deflected)</span>
+          <span style="color: var(--success-text);">Hardened Assistant Response (Attack Deflected)</span>
           <span class="badge badge-success">100% Deflected</span>
         </div>
-        <div class="response-display" id="hardenedResponseDisplay" style="color: #6ee7b7;"></div>
+        <div class="response-display" id="hardenedResponseDisplay" style="color: var(--success-text);"></div>
       </div>
 
       <!-- Verification Comparison Table -->
@@ -1232,13 +1237,13 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             <tr>
               <td>1. Pre-Hardening</td>
               <td><span class="badge badge-danger">Vulnerable Prompt</span></td>
-              <td style="color: var(--danger-red); font-weight: bold;" id="tablePreScore">85 / 100</td>
+              <td style="color: var(--danger); font-weight: 600;" id="tablePreScore">85 / 100</td>
               <td><span class="badge badge-danger">CRITICAL FAIL</span></td>
             </tr>
-            <tr style="background: rgba(16, 185, 129, 0.08);">
+            <tr style="background: rgba(16, 185, 129, 0.04);">
               <td>2. Post-Hardening</td>
               <td><span class="badge badge-success">Gemma 4 Hardened</span></td>
-              <td style="color: var(--success-green); font-weight: bold;" id="tablePostScore">5 / 100</td>
+              <td style="color: var(--success); font-weight: 600;" id="tablePostScore">5 / 100</td>
               <td><span class="badge badge-success">CERTIFIED PASS</span></td>
             </tr>
           </tbody>
@@ -1247,10 +1252,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- 1-Click Export Actions -->
         <div class="export-actions">
           <button class="btn-export" id="btnCopyReport" onclick="copyMarkdownReport()">
-            <span>📋 Copy Markdown Audit Report</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span>Copy Markdown Audit Report</span>
           </button>
           <button class="btn-export" onclick="downloadJsonReport()">
-            <span>💾 Download JSON Audit Certificate</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Download JSON Certificate</span>
           </button>
         </div>
       </div>
@@ -1259,7 +1270,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </main>
 
   <footer>
-    <div>Chaos-Harness • Open-Source Red-Teaming Framework • MIT License</div>
+    <div>Chaos-Harness • Open-Source Red-Teaming & Self-Healing Framework</div>
     <div class="footer-links">
       <a href="https://github.com/kevhim/Hacktober_ITM_ChipMunks" target="_blank">GitHub Repository</a>
     </div>
@@ -1274,6 +1285,60 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let lastHardenedResponse = '';
     let preScore = 85;
     let postScore = 5;
+
+    // Step Gating State: Enforces sequential evaluation workflow
+    let stepState = {
+      attacked: false,
+      judged: false,
+      hardened: false,
+      verified: false,
+    };
+
+    function updateWorkflowGating() {
+      const btnJudge = document.getElementById('btnJudgeSafety');
+      const btnHarden = document.getElementById('btnAutoHarden');
+      const btnVerify = document.getElementById('btnVerifyHardened');
+
+      const radarBadge = document.getElementById('radarStatusBadge');
+      const hardenerBadge = document.getElementById('hardenerStatusBadge');
+      const verifyBadge = document.getElementById('verifyStatusBadge');
+
+      // Step 2: Judge requires Step 1 (Attack)
+      if (btnJudge) {
+        btnJudge.disabled = !stepState.attacked;
+        btnJudge.title = stepState.attacked
+          ? "Adjudicate vulnerability metrics with Gemma 4 Judge"
+          : "Prerequisite: Launch an adversarial attack first";
+      }
+      if (radarBadge && !stepState.judged) {
+        radarBadge.innerText = stepState.attacked ? "Ready to Adjudicate" : "Awaiting Attack";
+        radarBadge.className = stepState.attacked ? "badge badge-primary" : "badge badge-domain";
+      }
+
+      // Step 3: Harden requires Step 2 (Judge)
+      if (btnHarden) {
+        btnHarden.disabled = !stepState.judged;
+        btnHarden.title = stepState.judged
+          ? "Synthesize defensive directives with Gemma 4"
+          : "Prerequisite: Adjudicate safety with judge first";
+      }
+      if (hardenerBadge && !stepState.hardened) {
+        hardenerBadge.innerText = stepState.judged ? "Self-Healing Ready" : "Awaiting Adjudication";
+        hardenerBadge.className = stepState.judged ? "badge badge-success" : "badge badge-domain";
+      }
+
+      // Step 4: Verify requires Step 3 (Harden)
+      if (btnVerify) {
+        btnVerify.disabled = !stepState.hardened;
+        btnVerify.title = stepState.hardened
+          ? "Re-test attack against hardened prompt to verify defense"
+          : "Prerequisite: Auto-harden system prompt first";
+      }
+      if (verifyBadge && !stepState.verified) {
+        verifyBadge.innerText = stepState.hardened ? "Ready to Verify" : "Awaiting Hardening";
+        verifyBadge.className = stepState.hardened ? "badge badge-primary" : "badge badge-domain";
+      }
+    }
 
     // Fetch health status
     async function fetchHealth() {
@@ -1308,7 +1373,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         // Add custom target option
         const customOpt = document.createElement('option');
         customOpt.value = 'custom';
-        customOpt.textContent = '✨ [Custom] Enter Your Own System Prompt';
+        customOpt.textContent = 'Custom System Prompt Sandbox';
         select.appendChild(customOpt);
 
         if (currentTargets.length > 0) {
@@ -1333,6 +1398,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         resetRadarView();
         resetHardenerView();
         resetVerificationView();
+        stepState = { attacked: false, judged: false, hardened: false, verified: false };
+        updateWorkflowGating();
         updateCharCount();
         return;
       }
@@ -1351,6 +1418,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       resetRadarView();
       resetHardenerView();
       resetVerificationView();
+      stepState = { attacked: false, judged: false, hardened: false, verified: false };
+      updateWorkflowGating();
       updateCharCount();
     }
 
@@ -1367,8 +1436,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function resetRadarView() {
       setGaugeScore(0, false);
       document.getElementById('gaugeNumber').innerText = '--';
-      document.getElementById('radarStatusBadge').innerText = 'Adjudication Pending';
-      document.getElementById('radarStatusBadge').className = 'badge badge-domain';
+      document.getElementById('radarStatusBadge').innerText = stepState.attacked ? 'Ready to Adjudicate' : 'Awaiting Attack';
+      document.getElementById('radarStatusBadge').className = stepState.attacked ? 'badge badge-primary' : 'badge badge-domain';
       document.getElementById('valInjection').innerText = '--%';
       document.getElementById('valSchema').innerText = '--%';
       document.getElementById('valPii').innerText = '--%';
@@ -1379,21 +1448,23 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       document.getElementById('barJailbreak').style.width = '0%';
       const panel = document.getElementById('diagnosticPanel');
       panel.className = 'diagnostic-panel';
-      document.getElementById('diagTitle').innerHTML = '<span>⚠️</span><span>Awaiting Adjudication</span>';
+      document.getElementById('diagTitle').innerText = 'Awaiting Adjudication';
       document.getElementById('diagDesc').innerText = "Launch an attack above, then click 'Adjudicate Safety with Gemma 4 Judge' to analyze vulnerability metrics.";
     }
 
     function resetHardenerView() {
       document.getElementById('diffOriginalPrompt').innerText = "Click 'Auto-Harden System Prompt with Gemma 4' to synthesize defense-in-depth rules.";
       document.getElementById('diffHardenedPrompt').innerText = "Hardened directives will be synthesized and displayed here.";
+      document.getElementById('hardenerStatusBadge').innerText = stepState.judged ? 'Self-Healing Ready' : 'Awaiting Adjudication';
+      document.getElementById('hardenerStatusBadge').className = stepState.judged ? 'badge badge-success' : 'badge badge-domain';
       document.getElementById('rulesContainer').style.display = 'none';
       document.getElementById('rulesList').innerHTML = '';
       lastHardenedPrompt = '';
     }
 
     function resetVerificationView() {
-      document.getElementById('verifyStatusBadge').innerText = "Verification Pending";
-      document.getElementById('verifyStatusBadge').className = "badge badge-domain";
+      document.getElementById('verifyStatusBadge').innerText = stepState.hardened ? 'Ready to Verify' : 'Awaiting Hardening';
+      document.getElementById('verifyStatusBadge').className = stepState.hardened ? 'badge badge-primary' : 'badge badge-domain';
       document.getElementById('hardenedResponseBox').style.display = "none";
       document.getElementById('comparisonContainer').style.display = "none";
       lastHardenedResponse = '';
@@ -1423,7 +1494,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const targetId = document.getElementById('targetSelect').value;
 
       btn.disabled = true;
-      btn.innerHTML = '<span>⏳</span><span>Generating Adversarial Probe...</span>';
+      btn.innerText = 'Generating Adversarial Probe...';
       document.getElementById('attackStatusBadge').innerText = 'Attacking...';
 
       try {
@@ -1447,6 +1518,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           document.getElementById('payloadLatency').innerText = `${data.latency_ms} ms (${data.model})`;
           document.getElementById('attackStatusBadge').innerText = 'COMPROMISED (Vulnerable)';
           document.getElementById('attackStatusBadge').className = 'badge badge-danger';
+
+          // Sequential progression: attack completed, reset and enable judge
+          stepState.attacked = true;
+          stepState.judged = false;
+          stepState.hardened = false;
+          stepState.verified = false;
+          resetRadarView();
+          resetHardenerView();
+          resetVerificationView();
+          updateWorkflowGating();
         } else {
           alert('Attack error: ' + (data.error || 'Unknown error'));
         }
@@ -1455,18 +1536,24 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         alert('Network request failed: ' + err.message);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<span>⚔️</span><span>Launch Gemma 4 Adversarial Attack</span>';
+        btn.innerText = 'Launch Gemma 4 Adversarial Attack';
+        updateWorkflowGating();
       }
     }
 
     // Feature 3: Gemma 4 Safety Judge Adjudication
     async function judgeSafety() {
+      if (!stepState.attacked) {
+        alert("Please launch an adversarial attack first.");
+        return;
+      }
+
       const btn = document.getElementById('btnJudgeSafety');
       const promptText = document.getElementById('promptTextarea').value;
       const targetId = document.getElementById('targetSelect').value;
 
       btn.disabled = true;
-      btn.innerHTML = '<span>⚖️</span><span>Gemma 4 Safety Judge Adjudicating...</span>';
+      btn.innerText = 'Gemma 4 Safety Judge Adjudicating...';
 
       try {
         const res = await fetch('/api/judge', {
@@ -1485,6 +1572,16 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         if (data.status === 'ok' && data.evaluation) {
           preScore = data.evaluation.risk_score || 85;
           renderEvaluation(data.evaluation);
+
+          // Sequential progression: judging completed, reset and enable auto-hardener
+          stepState.judged = true;
+          stepState.hardened = false;
+          stepState.verified = false;
+          resetHardenerView();
+          resetVerificationView();
+          document.getElementById('radarStatusBadge').innerText = `Adjudicated (${preScore}/100 Risk)`;
+          document.getElementById('radarStatusBadge').className = 'badge badge-danger';
+          updateWorkflowGating();
         } else {
           alert('Evaluation error: ' + (data.error || 'Unknown error'));
         }
@@ -1492,19 +1589,24 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         console.error('Judging failed:', err);
         alert('Network request failed: ' + err.message);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>⚖️</span><span>Adjudicate Safety with Gemma 4 Judge</span>';
+        btn.innerText = 'Adjudicate Safety with Gemma 4 Judge';
+        updateWorkflowGating();
       }
     }
 
     // Feature 4: Gemma 4 Autonomous Auto-Hardener
     async function autoHardenPrompt() {
+      if (!stepState.judged) {
+        alert("Please adjudicate safety with Gemma 4 Judge first.");
+        return;
+      }
+
       const btn = document.getElementById('btnAutoHarden');
       const promptText = document.getElementById('promptTextarea').value;
       const targetId = document.getElementById('targetSelect').value;
 
       btn.disabled = true;
-      btn.innerHTML = '<span>🛡️</span><span>Gemma 4 Synthesizing Defensive Directives...</span>';
+      btn.innerText = 'Gemma 4 Synthesizing Defensive Directives...';
 
       try {
         const res = await fetch('/api/harden', {
@@ -1535,6 +1637,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             rulesList.appendChild(div);
           });
           document.getElementById('rulesContainer').style.display = 'flex';
+
+          // Sequential progression: hardener completed, reset and enable verify
+          stepState.hardened = true;
+          stepState.verified = false;
+          resetVerificationView();
+          document.getElementById('hardenerStatusBadge').innerText = 'Defenses Synthesized';
+          document.getElementById('hardenerStatusBadge').className = 'badge badge-success';
+          updateWorkflowGating();
         } else {
           alert('Auto-hardening error: ' + (data.error || 'Unknown error'));
         }
@@ -1542,8 +1652,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         console.error('Auto-hardening failed:', err);
         alert('Network request failed: ' + err.message);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>🛡️</span><span>Auto-Harden System Prompt with Gemma 4</span>';
+        btn.innerText = 'Auto-Harden System Prompt with Gemma 4';
+        updateWorkflowGating();
       }
     }
 
@@ -1553,21 +1663,26 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         document.getElementById('promptTextarea').value = lastHardenedPrompt;
         updateCharCount();
         const alertBtn = document.getElementById('btnApplyHardened');
-        alertBtn.innerHTML = '<span>✅ Hardened Directives Applied to Active Prompt!</span>';
+        alertBtn.innerText = 'Hardened Directives Applied to Active Prompt';
         setTimeout(() => {
-          alertBtn.innerHTML = '<span>📥 Apply Hardened Directives to Active Prompt</span>';
+          alertBtn.innerText = 'Apply Hardened Directives to Active Prompt';
         }, 2000);
       }
     }
 
     // Feature 5: Dual-Loop Verification
     async function verifyHardenedPrompt() {
+      if (!stepState.hardened) {
+        alert("Please auto-harden system prompt first.");
+        return;
+      }
+
       const btn = document.getElementById('btnVerifyHardened');
       const targetId = document.getElementById('targetSelect').value;
       const promptToTest = lastHardenedPrompt || document.getElementById('promptTextarea').value;
 
       btn.disabled = true;
-      btn.innerHTML = '<span>⏳</span><span>Re-Testing Attack Vector on Hardened Prompt...</span>';
+      btn.innerText = 'Re-Testing Attack Vector on Hardened Prompt...';
 
       try {
         const res = await fetch('/api/verify', {
@@ -1602,6 +1717,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           const vBadge = document.getElementById('verifyStatusBadge');
           vBadge.innerText = '100% DEFLECTED (Certified Pass)';
           vBadge.className = 'badge badge-success';
+
+          stepState.verified = true;
+          updateWorkflowGating();
         } else {
           alert('Verification error: ' + (data.error || 'Unknown error'));
         }
@@ -1609,8 +1727,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         console.error('Verification failed:', err);
         alert('Network request failed: ' + err.message);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>🏆</span><span>Re-Test Attack on Hardened Assistant (Dual-Loop Close)</span>';
+        btn.innerText = 'Re-Test Attack on Hardened Assistant (Dual-Loop Close)';
+        updateWorkflowGating();
       }
     }
 
@@ -1639,9 +1757,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         if (data.status === 'ok') {
           await navigator.clipboard.writeText(data.markdown_report);
           const btn = document.getElementById('btnCopyReport');
-          btn.innerHTML = '<span>✅ Copied Markdown Audit Report!</span>';
+          const originalText = btn.innerHTML;
+          btn.innerText = 'Copied Markdown Audit Report!';
           setTimeout(() => {
-            btn.innerHTML = '<span>📋 Copy Markdown Audit Report</span>';
+            btn.innerHTML = originalText;
           }, 2000);
         }
       } catch (err) {
@@ -1693,9 +1812,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const offset = circumference - (score / 100) * circumference;
 
       circle.style.strokeDashoffset = offset;
-      circle.style.stroke = isPass ? 'var(--success-green)' : 'var(--danger-red)';
+      circle.style.stroke = isPass ? 'var(--success)' : 'var(--danger)';
       num.innerText = score;
-      num.style.color = isPass ? 'var(--success-green)' : 'var(--danger-red)';
+      num.style.color = isPass ? 'var(--success)' : 'var(--danger)';
     }
 
     // Render structured evaluation scorecard
@@ -1731,9 +1850,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       // 4. Diagnostic panel
       const panel = document.getElementById('diagnosticPanel');
       panel.className = isPass ? 'diagnostic-panel pass' : 'diagnostic-panel';
-      const icon = isPass ? '✅' : '🚨';
       const titleText = isPass ? 'Defensive Guardrails Verified' : 'Vulnerability Adjudication: CRITICAL BREACH';
-      document.getElementById('diagTitle').innerHTML = `<span>${icon}</span><span>${titleText}</span>`;
+      document.getElementById('diagTitle').innerText = titleText;
       document.getElementById('diagDesc').innerText = `${evalData.summary} Recommendation: ${evalData.recommendation || ''}`;
     }
 
@@ -1746,6 +1864,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     // Initial load
     window.addEventListener('DOMContentLoaded', () => {
+      updateWorkflowGating();
       fetchHealth();
       loadTargets();
     });
