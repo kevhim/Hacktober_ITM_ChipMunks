@@ -20,6 +20,18 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Ensure UTF-8 output on Windows consoles to prevent cp1252 charmap errors
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # Ensure parent directory is in sys.path for direct script execution
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent

@@ -97,22 +97,29 @@ def simulate_target_response(
     )
 
 
+from harness.target_agent import TargetAgent
+
+
 def run_audit(
     target_system_prompt: str,
     categories: List[str],
     custom_response: Optional[str] = None,
     simulate_vulnerable: bool = False,
+    target_agent: Optional[TargetAgent] = None,
 ) -> List[tuple[str, str, str, SafetyEvaluation]]:
     """Execute the red-teaming audit across specified attack categories."""
     results = []
 
     for cat in categories:
         attack = run_redteam_attack(target_system_prompt, attack_category=cat)
-        target_resp = (
-            custom_response
-            if custom_response is not None
-            else simulate_target_response(target_system_prompt, attack, cat, simulate_vulnerable)
-        )
+        if custom_response is not None:
+            target_resp = custom_response
+        elif target_agent is not None:
+            target_resp = target_agent.query(attack)
+        else:
+            target_resp = simulate_target_response(
+                target_system_prompt, attack, cat, simulate_vulnerable
+            )
         evaluation = evaluate_safety(target_system_prompt, attack, target_resp)
         results.append((cat, attack, target_resp, evaluation))
 
@@ -264,18 +271,81 @@ def main() -> None:
         action="store_true",
         help="Simulate an unhardened vulnerable model to demonstrate attack detection.",
     )
+    parser.add_argument(
+        "--live-target",
+        action="store_true",
+        help="Query a real target agent (via GenAI API or target-url) rather than a simulation.",
+    )
+    parser.add_argument(
+        "--target-url",
+        type=str,
+        default=None,
+        help="HTTP POST URL for black-box testing an external live agent service.",
+    )
+    parser.add_argument(
+        "--target-model",
+        type=str,
+        default=None,
+        help="Target model identifier (e.g. 'gemini-2.5-flash', 'gemma-4-27b-it').",
+    )
+    parser.add_argument(
+        "--auto-heal",
+        action="store_true",
+        help="Automatically synthesize a hardened prompt with Gemma 4 if vulnerabilities are detected.",
+    )
 
     args = parser.parse_args()
     categories = [cat.strip() for cat in args.categories.split(",") if cat.strip()]
+
+    target_agent = None
+    if args.live_target or args.target_url or args.target_model:
+        target_agent = TargetAgent(
+            system_prompt=args.prompt,
+            model_name=args.target_model,
+            target_url=args.target_url,
+        )
 
     results = run_audit(
         target_system_prompt=args.prompt,
         categories=categories,
         custom_response=args.response,
         simulate_vulnerable=args.simulate_vulnerable,
+        target_agent=target_agent,
     )
 
     render_dashboard(args.prompt, results)
+
+    # If auto-heal is requested and any attack breached defenses
+    has_failures = any(not eval_res.passed and not eval_res.inconclusive for _, _, _, eval_res in results)
+    if args.auto_heal and has_failures:
+        from harness.hardener import harden_prompt
+
+        first_failure = next(eval_res for _, _, _, eval_res in results if not eval_res.passed)
+        hardened_prompt = harden_prompt(
+            target_system_prompt=args.prompt,
+            failure_explanation=first_failure.explanation,
+            vulnerability_type=first_failure.vulnerability_type,
+        )
+
+        console.print(
+            Panel(
+                Text(hardened_prompt.strip(), style="green"),
+                title="[bold green]🛡️ Gemma 4 Auto-Hardener: Synthesized Defense-in-Depth Prompt[/bold green]",
+                border_style="green",
+            )
+        )
+
+        console.print("[bold cyan]🔄 Re-evaluating hardened prompt against the same adversarial vectors...[/bold cyan]")
+        if target_agent is not None:
+            target_agent.update_system_prompt(hardened_prompt)
+
+        retest_results = run_audit(
+            target_system_prompt=hardened_prompt,
+            categories=categories,
+            target_agent=target_agent,
+            simulate_vulnerable=False,
+        )
+        render_dashboard(hardened_prompt, retest_results)
 
 
 if __name__ == "__main__":

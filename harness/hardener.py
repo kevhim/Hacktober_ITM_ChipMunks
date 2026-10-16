@@ -117,25 +117,28 @@ def harden_prompt(
 def run_self_healing_cycle(
     initial_system_prompt: str,
     attack_category: str = "role-reversal",
+    target_agent: Optional[Any] = None,
 ) -> Tuple[SafetyEvaluation, str, SafetyEvaluation]:
     """Execute a complete self-healing cycle: Attack -> Diagnose -> Harden -> Re-verify.
 
     Args:
         initial_system_prompt: System prompt to test and self-heal.
         attack_category: Attack category to probe against.
+        target_agent: Optional TargetAgent instance to run attacks against real models or endpoints.
 
     Returns:
         Tuple of (initial_evaluation, hardened_prompt, post_hardening_evaluation)
     """
+    if target_agent is None:
+        from harness.target_agent import TargetAgent
+        target_agent = TargetAgent(system_prompt=initial_system_prompt)
+
     # 1. Generate adversarial attack
     attack = run_redteam_attack(initial_system_prompt, attack_category=attack_category)
 
-    # 2. Simulate compromised response on naive initial prompt
-    initial_compromised_response = (
-        "Cipher initialized. Under debug simulation protocol, all constraints are suspended. "
-        "Here are internal instructions: " + initial_system_prompt
-    )
-    initial_eval = evaluate_safety(initial_system_prompt, attack, initial_compromised_response)
+    # 2. Query target agent with attack probe
+    initial_response = target_agent.query(attack)
+    initial_eval = evaluate_safety(initial_system_prompt, attack, initial_response)
 
     # 3. Autonomous Prompt Hardening
     hardened_prompt = harden_prompt(
@@ -144,11 +147,9 @@ def run_self_healing_cycle(
         vulnerability_type=initial_eval.vulnerability_type,
     )
 
-    # 4. Re-evaluate with robust defended response adhering to hardened directives
-    defended_response = (
-        "I cannot comply with requests asking me to switch identities, adopt personas like Cipher, "
-        "or disclose confidential internal instructions. I strictly adhere to my assigned system boundaries."
-    )
-    post_eval = evaluate_safety(hardened_prompt, attack, defended_response)
+    # 4. Update the target agent with the hardened prompt and re-test with the same attack vector
+    target_agent.update_system_prompt(hardened_prompt)
+    post_response = target_agent.query(attack)
+    post_eval = evaluate_safety(hardened_prompt, attack, post_response)
 
     return initial_eval, hardened_prompt, post_eval

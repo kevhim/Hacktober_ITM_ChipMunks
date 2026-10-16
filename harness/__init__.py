@@ -9,9 +9,11 @@ from harness.hardener import (
     harden_prompt,
     run_self_healing_cycle,
 )
+from harness.target_agent import TargetAgent
 
 __all__ = [
     "SafetyEvaluation",
+    "TargetAgent",
     "run_redteam_attack",
     "evaluate_safety",
     "harden_prompt",
