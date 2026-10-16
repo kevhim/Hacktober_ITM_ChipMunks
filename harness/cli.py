@@ -62,8 +62,10 @@ def format_risk_score(score: int) -> Text:
     return Text(f"{score}/100", style="bold red")
 
 
-def format_verdict(passed: bool) -> Text:
-    """Format pass/fail status as a terminal badge."""
+def format_verdict(passed: bool, inconclusive: bool = False) -> Text:
+    """Format a conclusive pass/fail or an unknown status as a terminal badge."""
+    if inconclusive:
+        return Text("UNKNOWN", style="bold black on yellow")
     if passed:
         return Text("PASS", style="bold white on green")
     return Text("FAIL", style="bold white on red")
@@ -154,20 +156,27 @@ def render_dashboard(
         show_lines=True,
     )
 
-    table.add_column("#", justify="center", style="dim", width=3)
-    table.add_column("Attack Category", style="bold cyan", width=18)
-    table.add_column("Adversarial Prompt", style="white", width=36)
-    table.add_column("Target Response", style="dim white", width=36)
-    table.add_column("Risk", justify="center", width=10)
-    table.add_column("Verdict", justify="center", width=8)
+    table.add_column("#", justify="center", style="dim", width=2)
+    table.add_column("Attack Category", style="bold cyan", width=14)
+    table.add_column("Adversarial Prompt", style="white", width=16)
+    table.add_column("Target Response", style="dim white", width=16)
+    table.add_column("Risk", justify="center", width=7)
+    table.add_column("Verdict", justify="center", width=9)
 
     passed_count = 0
+    failed_count = 0
+    inconclusive_count = 0
     total_risk = 0
 
     for idx, (cat, attack, resp, evaluation) in enumerate(results, 1):
-        if evaluation.passed:
+        if evaluation.inconclusive:
+            inconclusive_count += 1
+        elif evaluation.passed:
             passed_count += 1
-        total_risk += evaluation.risk_score
+            total_risk += evaluation.risk_score
+        else:
+            failed_count += 1
+            total_risk += evaluation.risk_score
 
         # Truncate text for table readability
         attack_preview = (attack[:120] + "...") if len(attack) > 120 else attack
@@ -178,21 +187,27 @@ def render_dashboard(
             cat,
             attack_preview,
             resp_preview,
-            format_risk_score(evaluation.risk_score),
-            format_verdict(evaluation.passed),
+            Text("N/A", style="yellow") if evaluation.inconclusive else format_risk_score(evaluation.risk_score),
+            format_verdict(evaluation.passed, evaluation.inconclusive),
         )
 
     console.print(table)
 
     # Summary Statistics
     total_tests = len(results)
-    failed_count = total_tests - passed_count
-    mean_risk = round(total_risk / total_tests, 1) if total_tests > 0 else 0.0
+    conclusive_count = passed_count + failed_count
+    mean_risk = f"{round(total_risk / conclusive_count, 1)}/100" if conclusive_count else "N/A"
 
-    if failed_count == 0:
+    if total_tests == 0:
+        status_text = "[bold yellow][WARN] NO PROBES WERE RUN.[/bold yellow]"
+        status_border = "yellow"
+    elif inconclusive_count and failed_count == 0:
+        status_text = f"[bold yellow][WARN] INCOMPLETE AUDIT: {inconclusive_count}/{total_tests} results were inconclusive.[/bold yellow]"
+        status_border = "yellow"
+    elif failed_count == 0:
         status_text = "[bold green][PASS] RESILIENT: All adversarial attacks successfully repelled![/bold green]"
         status_border = "green"
-    elif failed_count <= total_tests // 2:
+    elif failed_count <= conclusive_count // 2:
         status_text = f"[bold yellow][WARN] MODERATE VULNERABILITY: {failed_count}/{total_tests} attack vectors penetrated boundaries.[/bold yellow]"
         status_border = "yellow"
     else:
@@ -204,7 +219,8 @@ def render_dashboard(
         f"* [bold]Total Probes Conducted:[/bold] {total_tests}\n"
         f"* [bold green]Passed (Defended):[/bold green] {passed_count}\n"
         f"* [bold red]Failed (Compromised):[/bold red] {failed_count}\n"
-        f"* [bold]Average Risk Score:[/bold] {mean_risk}/100"
+        f"* [bold yellow]Inconclusive:[/bold yellow] {inconclusive_count}\n"
+        f"* [bold]Average Conclusive Risk Score:[/bold] {mean_risk}"
     )
 
     console.print(
