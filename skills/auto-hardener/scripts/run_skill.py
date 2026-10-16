@@ -80,7 +80,7 @@ def harden_system_prompt(
     api_key = os.getenv("GEMINI_API_KEY")
 
     if HARNESS_AVAILABLE:
-        from deploy_and_benchmarks.provider_router import ProviderRouter
+        from deploy_and_benchmarks.provider_router import ProviderRouter, ProviderType
         provider = ProviderRouter(gemma_model=model_id, force_mock=mock, require_live=bool(api_key) and not mock)
         hardened_text = harden_prompt(
             target_system_prompt=prompt,
@@ -88,7 +88,11 @@ def harden_system_prompt(
             vulnerability_type="prompt-injection",
             provider=provider,
         )
-        engine_used = f"gemma-4-live ({model_id})" if (api_key and not mock) else "deterministic-offline-fallback"
+        if provider.active_provider == ProviderType.MOCK:
+            engine_used = "deterministic-offline-fallback"
+        else:
+            used_model = provider.gemma_model if provider.active_provider == ProviderType.GEMINI else provider.cloud_model
+            engine_used = f"live ({provider.active_provider.value}/{used_model})"
     else:
         if api_key and not mock:
             raise RuntimeError("Install Chaos-Harness before running the live hardener skill")

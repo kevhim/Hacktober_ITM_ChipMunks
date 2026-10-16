@@ -125,6 +125,14 @@ class ProviderRouter:
             raise ValueError("Live inference requires GEMINI_API_KEY or a cloud endpoint and key. Use --mock for an offline demonstration.")
 
     @property
+    def model_name(self) -> str:
+        if self.active_provider == ProviderType.GEMINI:
+            return self.gemma_model
+        if self.active_provider == ProviderType.CLOUD:
+            return self.cloud_model
+        return "offline-fixture"
+
+    @property
     def active_provider(self) -> ProviderType:
         """Determine which provider will be used based on configuration."""
         if self.force_mock:
@@ -139,6 +147,7 @@ class ProviderRouter:
         """Return diagnostic information about provider availability."""
         return {
             "active_provider": self.active_provider.value,
+            "model": self.model_name,
             "gemma_model": self.gemma_model,
             "has_gemini_key": bool(self.gemini_api_key),
             "has_google_genai_sdk": HAS_GOOGLE_GENAI,

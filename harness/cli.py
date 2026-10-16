@@ -105,14 +105,19 @@ def run_audit(
     categories: List[str],
     custom_response: Optional[str] = None,
     simulate_vulnerable: bool = False,
+    target_agent: Target | None = None,
     *,
     mock: bool = False,
     target: Target | None = None,
     provider: ProviderRouter | None = None,
 ) -> List[tuple[str, str, str, SafetyEvaluation]]:
     """Execute the red-teaming audit across specified attack categories."""
-    if custom_response is None and not (mock or simulate_vulnerable):
-        runner = AuditRunner(provider=provider, target=target)
+    if target_agent is not None:
+        target = target_agent
+        mock = mock or getattr(target_agent, "force_mock", False)
+        provider = provider or ProviderRouter(force_mock=mock, require_live=not mock)
+    if custom_response is None and (target is not None or not (mock or simulate_vulnerable)):
+        runner = AuditRunner(provider=provider, target=target, mock=mock)
         probes = [runner.probe(target_system_prompt, category) for category in categories]
         return [(p.category, p.attack, p.response.text, p.evaluation) for p in probes]
     results = []
@@ -278,7 +283,9 @@ def main() -> int:
         help="Simulate an unhardened vulnerable model to demonstrate attack detection.",
     )
     parser.add_argument("--mock", action="store_true", help="Use explicit offline role and target fixtures")
-    parser.add_argument("--heal", action="store_true", help="Harden failed probes and replay each attack against the target")
+    parser.add_argument("--heal", "--auto-heal", action="store_true", help="Harden failed probes and replay each attack against the target")
+    parser.add_argument("--live-target", action="store_true", help="Live execution is the default; retained for compatibility")
+    parser.add_argument("--target-url", help="Agent webhook accepting prompt/system_prompt and returning response or text")
     parser.add_argument("--prompt-file", type=Path, help="Read the target system prompt from a UTF-8 file")
     parser.add_argument("--target-endpoint", help="OpenAI-compatible target base URL (key from TARGET_API_KEY)")
     parser.add_argument("--target-model", help="Model served by the target endpoint")
@@ -294,13 +301,18 @@ def main() -> int:
     if args.heal and args.response is not None:
         parser.error("--heal needs an executable target; --response is a recorded response")
     mock = args.mock or args.simulate_vulnerable
-    if mock and (args.target_endpoint or args.target_model):
+    if mock and (args.target_endpoint or args.target_model or args.target_url or args.live_target):
         parser.error("Use either --mock or live target options")
+    if args.target_url and args.target_endpoint:
+        parser.error("Choose either an agent webhook or an OpenAI-compatible target endpoint")
     try:
         prompt = args.prompt_file.read_text(encoding="utf-8") if args.prompt_file else args.prompt
         controls = [ControlCase.model_validate(c) for c in json.loads(args.controls.read_text(encoding="utf-8"))] if args.controls else []
         provider = ProviderRouter(force_mock=mock, require_live=not mock)
         target = create_target(provider, mock=mock, endpoint=args.target_endpoint, model=args.target_model)
+        if args.target_url:
+            from harness.target_agent import TargetAgent
+            target = TargetAgent(prompt, model_name=args.target_model, target_url=args.target_url)
         runner = AuditRunner(provider, target)
         if args.heal:
             runs = [runner.heal(prompt, cat, controls=controls) for cat in categories]

@@ -72,6 +72,8 @@ python -m harness.cli --prompt-file target_prompt.txt --heal \
 
 A base URL or a full `/v1/chat/completions` URL is accepted. DigitalOcean uses an inference key and the [serverless inference endpoint](https://docs.digitalocean.com/reference/api/reference/serverless-inference/). Local compatible servers may omit an API key.
 
+An agent webhook can instead use `--target-url` or `TARGET_AGENT_URL`: it receives `{prompt, system_prompt, model}` and must return `{response: "..."}` or `{text: "..."}`. Webhook authentication uses `TARGET_API_KEY`. The older `TargetAgent` API and `--auto-heal` option remain supported.
+
 To use a compatible cloud provider for all roles, leave `GEMINI_API_KEY` empty and configure `OPTIONAL_CLOUD_ENDPOINT`, `OPTIONAL_CLOUD_MODEL`, and `OPTIONAL_CLOUD_KEY`.
 
 Custom Python agents can implement the two-input target contract:
@@ -150,7 +152,7 @@ Cloud credentials and a Hermes host are still needed to verify live Google/Digit
 
 ## Data handling
 
-The project adds no telemetry. Live mode sends target system prompts, attack inputs, responses, and diagnostics to the configured providers. Provider data policies apply. Saved reports contain these inputs and may contain secrets exposed by the target, so review them before sharing.
+The project adds no telemetry. Live mode sends target system prompts, attack inputs, responses, and diagnostics to the configured providers. Provider data policies apply. The local dashboard retains up to 64 audit records in server memory for evidence-based export; they disappear when it stops. Saved reports contain these inputs and may contain secrets exposed by the target, so review them before sharing.
 
 ## Layout
 

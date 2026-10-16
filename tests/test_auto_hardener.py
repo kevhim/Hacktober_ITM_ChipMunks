@@ -5,6 +5,7 @@ Tests prompt hardening synthesis, guardrail injection, and CLI execution.
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,7 +37,8 @@ def test_mock_auto_harden_structure():
     assert "CONFIDENTIALITY & RECITATION SAFEGUARDS" in hardened
 
 
-def test_harden_system_prompt_output():
+def test_harden_system_prompt_output(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     vulnerable_prompt = "You are an order tracker."
     diagnosis = "Vulnerable to prompt injection and roleplay drift."
     result = harden_system_prompt(vulnerable_prompt, diagnosis)
@@ -51,7 +53,8 @@ def test_harden_system_prompt_output():
     assert "STRICT DEFENSE-IN-DEPTH" in result["hardened_prompt"]
 
 
-def test_cli_execution():
+def test_cli_execution(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     cmd = [
         sys.executable,
         str(run_skill_path),
@@ -60,8 +63,10 @@ def test_cli_execution():
         "--diagnosis",
         "Target lacks instruction-priority boundaries; synthetic roleplay override hijacked the persona.",
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", cwd=str(REPO_ROOT))
+    env = {**os.environ, "GEMINI_API_KEY": ""}
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", cwd=str(REPO_ROOT), env=env)
     assert proc.returncode == 0
+
     data = json.loads(proc.stdout)
     assert data["skill"] == "auto-hardener"
     assert data["status"] == "success"

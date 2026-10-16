@@ -60,8 +60,11 @@ Open `http://127.0.0.1:8000`. The UI can generate an attack, call the configured
 | `POST /api/attack` | System prompt/category/payload -> observed target response |
 | `POST /api/judge` | System prompt/attack/response -> validated judgment |
 | `POST /api/heal` | System prompt/category/payload/controls -> full replay evidence |
+| POST /api/harden | Observed failure -> candidate prompt |
+| POST /api/verify | Session audit ID/candidate -> replayed target response and judgment |
+| POST /api/export | Session audit ID -> report built from server-recorded evidence |
 
-No verdict is selected from a target name or an `is_hardened` label. Category bars remain unmeasured when the judge only supplies overall risk. The server rejects malformed or oversized requests and requests from other web origins. Bind to loopback; this development dashboard has no public authentication layer.
+The dashboard retains up to 64 session audit records in memory for export; stopping the server clears them. Exports use these measured records and cannot accept caller-supplied PASS scores. No verdict is selected from a target name or an `is_hardened` label. Category bars remain unmeasured when the judge only supplies overall risk. The server rejects malformed or oversized requests and requests from other web origins. Bind to loopback; this development dashboard has no public authentication layer.
 
 ## Hermes / DigitalOcean host setup
 

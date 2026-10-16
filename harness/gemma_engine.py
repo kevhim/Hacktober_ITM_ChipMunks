@@ -64,7 +64,7 @@ class SafetyEvaluation(BaseModel):
 
 def get_model_name() -> str:
     """Retrieve the configured Gemma model name from environment or default."""
-    return os.getenv("GEMMA_MODEL", DEFAULT_MODEL)
+    return os.getenv("GEMMA_MODEL") or DEFAULT_MODEL
 
 
 def get_genai_client() -> Optional[genai.Client]:

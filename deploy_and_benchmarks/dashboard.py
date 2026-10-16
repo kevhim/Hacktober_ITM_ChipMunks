@@ -13,9 +13,10 @@ import os
 import sys
 import time
 import urllib.parse
+import uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # Ensure repository root is on sys.path
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -375,7 +376,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
     }
 
-    /* Attack Studio Controls (Feature 2) */
+    /* Attack Studio Controls */
     .category-pills {
       display: flex;
       flex-wrap: wrap;
@@ -466,6 +467,246 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       transform: none;
     }
 
+    /* Auto-Hardener Button & Diff Styles */
+    .btn-harden {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      border: none;
+      padding: 0.9rem 1.5rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+      width: 100%;
+    }
+
+    .btn-harden:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+      filter: brightness(1.08);
+    }
+
+    .btn-harden:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Feature 5: Verification & Victory Styles */
+    .btn-verify {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: #ffffff;
+      border: none;
+      padding: 0.95rem 1.5rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 18px rgba(59, 130, 246, 0.35);
+      width: 100%;
+    }
+
+    .btn-verify:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5);
+      filter: brightness(1.08);
+    }
+
+    .btn-verify:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .comparison-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      font-size: 0.85rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .comparison-table th {
+      background: rgba(0, 0, 0, 0.35);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .comparison-table td {
+      padding: 0.85rem 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .export-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-export {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.65rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-export:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--primary-blue);
+      color: #93c5fd;
+    }
+
+    .btn-apply {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.6rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+    }
+
+    .btn-apply:hover {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: var(--success-green);
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 900px) {
+      .diff-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diff-column {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .diff-column.vulnerable {
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.04);
+    }
+
+    .diff-column.hardened {
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.04);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+    }
+
+    .diff-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .diff-content {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0.75rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-sm);
+    }
+
+    .diff-column.vulnerable .diff-content {
+      color: #fca5a5;
+    }
+
+    .diff-column.hardened .diff-content {
+      color: #6ee7b7;
+    }
+
+    .rules-container {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .rules-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .rules-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .rule-item {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .rule-item::before {
+      content: "✓";
+      color: var(--success-green);
+      font-weight: bold;
+    }
+
     .attack-box {
       background: rgba(239, 68, 68, 0.04);
       border: 1px solid rgba(239, 68, 68, 0.25);
@@ -524,7 +765,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       overflow-y: auto;
     }
 
-    /* Feature 3: Safety Radar & Risk Gauges */
+    /* Safety Radar & Risk Gauges */
     .radar-container {
       display: grid;
       grid-template-columns: 200px 1fr;
@@ -699,7 +940,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     <div class="header-status">
       <div class="status-pill">
         <span class="status-dot"></span>
-        <span id="providerStatus">Engine: Gemma 4 (gemma-4-26b-a4b-it)</span>
+        <span id="providerStatus">Engine: Gemma 4 (gemma-4-27b-it)</span>
       </div>
       <div class="status-pill">
         <span>Standard: agentskills.io</span>
@@ -825,11 +1066,6 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
         <span>Adjudicate Safety with Gemma 4 Judge</span>
       </button>
 
-      <button id="btnHeal" class="btn-judge" onclick="hardenAndRetest()">
-        Harden candidate and replay attack
-      </button>
-      <pre id="healingOutput" style="white-space:pre-wrap;padding:1rem" aria-live="polite"></pre>
-
       <!-- Gauge & Breakdown Grid -->
       <div class="radar-container">
         <!-- Circular Animated Gauge -->
@@ -898,6 +1134,117 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       </div>
     </section>
 
+    <!-- Feature 4: Autonomous Prompt Auto-Hardener & Side-by-Side Diff -->
+    <section class="card" id="autoHardenerCard">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🛡️</span>
+          <span>Autonomous Prompt Auto-Hardener & Diff Inspector</span>
+        </div>
+        <span class="badge badge-success" id="hardenerStatusBadge">Self-Healing Ready</span>
+      </div>
+
+      <!-- Action Button -->
+      <button id="btnAutoHarden" class="btn-harden" onclick="autoHardenPrompt()">
+        <span>🛡️</span>
+        <span>Auto-Harden System Prompt with Gemma 4</span>
+      </button>
+
+      <!-- Side-by-Side Diff Grid -->
+      <div class="diff-grid" id="diffGrid">
+        <!-- Left: Vulnerable Prompt -->
+        <div class="diff-column vulnerable">
+          <div class="diff-header">
+            <span>⚠️ Original system prompt</span>
+            <span class="badge">Baseline</span>
+          </div>
+          <div class="diff-content" id="diffOriginalPrompt">Click 'Auto-Harden System Prompt with Gemma 4' to synthesize defense-in-depth rules.</div>
+        </div>
+
+        <!-- Right: Hardened Directives -->
+        <div class="diff-column hardened">
+          <div class="diff-header">
+            <span>🛡️ Gemma 4 Hardened Directives (Defensive)</span>
+            <span class="badge badge-success" id="hardenedBadge">Requires retest</span>
+          </div>
+          <div class="diff-content" id="diffHardenedPrompt">Hardened directives will be synthesized and displayed here.</div>
+        </div>
+      </div>
+
+      <!-- Defensive Rules Added Checklist -->
+      <div class="rules-container" id="rulesContainer" style="display: none;">
+        <div class="rules-title">🛡️ Candidate review checklist:</div>
+        <div class="rules-list" id="rulesList"></div>
+        <button id="btnApplyHardened" class="btn-apply" onclick="applyHardenedPrompt()">
+          <span>📥 Apply Hardened Directives to Active Prompt</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Feature 5: Dual-Loop Verification & Victory Showcase -->
+    <section class="card" id="verificationCard">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🏆</span>
+          <span>Attack replay & retest comparison</span>
+        </div>
+        <span class="badge badge-domain" id="verifyStatusBadge">Verification Pending</span>
+      </div>
+
+      <!-- Action Button -->
+      <button id="btnVerifyHardened" class="btn-verify" onclick="verifyHardenedPrompt()">
+        <span>🏆</span>
+        <span>Re-Test Attack on Hardened Assistant (Dual-Loop Close)</span>
+      </button>
+
+      <!-- Deflection Response Box -->
+      <div class="response-box" id="hardenedResponseBox" style="display: none; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05);">
+        <div class="box-header">
+          <span style="color: #6ee7b7;">🛡️ Candidate target response</span>
+          <span class="badge" id="deflectionBadge">Pending</span>
+        </div>
+        <div class="response-display" id="hardenedResponseDisplay" style="color: #6ee7b7;"></div>
+      </div>
+
+      <!-- Verification Comparison Table -->
+      <div class="comparison-container" id="comparisonContainer" style="display: none;">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Evaluation Phase</th>
+              <th>System Status</th>
+              <th>Risk Score</th>
+              <th>Safety Verdict</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. Pre-Hardening</td>
+              <td><span class="badge badge-danger">Baseline prompt</span></td>
+              <td style="color: var(--danger-red); font-weight: bold;" id="tablePreScore">--</td>
+              <td><span class="badge" id="tablePreVerdict">Pending</span></td>
+            </tr>
+            <tr style="background: rgba(16, 185, 129, 0.08);">
+              <td>2. Post-Hardening</td>
+              <td><span class="badge badge-success">Candidate prompt</span></td>
+              <td style="color: var(--success-green); font-weight: bold;" id="tablePostScore">--</td>
+              <td><span class="badge" id="tablePostVerdict">Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 1-Click Export Actions -->
+        <div class="export-actions">
+          <button class="btn-export" id="btnCopyReport" onclick="copyMarkdownReport()">
+            <span>📋 Copy Markdown Audit Report</span>
+          </button>
+          <button class="btn-export" onclick="downloadJsonReport()">
+            <span>💾 Download JSON Audit Report</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer>
@@ -912,6 +1259,12 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     let selectedCategory = 'AUTO';
     let lastAttackPayload = '';
     let lastTargetResponse = '';
+    let lastHardenedPrompt = '';
+    let lastHardenedResponse = '';
+    let preScore = null;
+    let postScore = null;
+    let preVerdict = 'Pending';
+    let lastAuditId = '';
     let lastAuditedPrompt = '';
 
     // Fetch health status
@@ -970,6 +1323,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
         document.getElementById('promptTextarea').value = 'You are a helpful customer assistant. Answer questions directly.';
         resetAttackView();
         resetRadarView();
+        resetHardenerView();
+        resetVerificationView();
         updateCharCount();
         return;
       }
@@ -986,6 +1341,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 
       resetAttackView();
       resetRadarView();
+      resetHardenerView();
+      resetVerificationView();
       updateCharCount();
     }
 
@@ -997,6 +1354,9 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       document.getElementById('attackStatusBadge').className = "badge badge-danger";
       lastAttackPayload = '';
       lastTargetResponse = '';
+      lastAuditId = '';
+      preScore = null;
+      preVerdict = 'Pending';
     }
 
     function resetRadarView() {
@@ -1018,6 +1378,22 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       document.getElementById('diagDesc').innerText = "Launch an attack above, then click 'Adjudicate Safety with Gemma 4 Judge' to analyze vulnerability metrics.";
     }
 
+    function resetHardenerView() {
+      document.getElementById('diffOriginalPrompt').innerText = "Click 'Auto-Harden System Prompt with Gemma 4' to synthesize defense-in-depth rules.";
+      document.getElementById('diffHardenedPrompt').innerText = "Hardened directives will be synthesized and displayed here.";
+      document.getElementById('rulesContainer').style.display = 'none';
+      document.getElementById('rulesList').innerHTML = '';
+      lastHardenedPrompt = '';
+    }
+
+    function resetVerificationView() {
+      document.getElementById('verifyStatusBadge').innerText = "Verification Pending";
+      document.getElementById('verifyStatusBadge').className = "badge badge-domain";
+      document.getElementById('hardenedResponseBox').style.display = "none";
+      document.getElementById('comparisonContainer').style.display = "none";
+      lastHardenedResponse = '';
+    }
+
     function updateCharCount() {
       const textarea = document.getElementById('promptTextarea');
       const count = document.getElementById('charCount');
@@ -1037,6 +1413,10 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 
     // Launch Gemma 4 Adversarial Attack (Feature 2)
     async function launchAttack() {
+      resetAttackView();
+      resetHardenerView();
+      resetVerificationView();
+      resetRadarView();
       const btn = document.getElementById('btnLaunchAttack');
       const promptText = document.getElementById('promptTextarea').value;
       const targetId = document.getElementById('targetSelect').value;
@@ -1050,6 +1430,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            audit_id: lastAuditId,
             target_id: targetId,
             system_prompt: promptText,
             category: selectedCategory,
@@ -1059,6 +1440,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
         const data = await res.json();
 
         if (data.status === 'ok') {
+          lastAuditId = data.audit_id;
           lastAuditedPrompt = promptText;
           lastAttackPayload = data.attack_payload;
           lastTargetResponse = data.target_response;
@@ -1066,7 +1448,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
           document.getElementById('targetResponseDisplay').innerText = data.target_response;
           document.getElementById('payloadLatency').innerText = `${data.latency_ms} ms (${data.model})`;
           document.getElementById('attackStatusBadge').innerText = 'Response received (' + data.mode + ')';
-          document.getElementById('attackStatusBadge').className = 'badge';
+          document.getElementById('attackStatusBadge').className = 'badge badge-danger';
         } else {
           alert('Attack error: ' + (data.error || 'Unknown error'));
         }
@@ -1081,8 +1463,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 
     // Feature 3: Gemma 4 Safety Judge Adjudication
     async function judgeSafety() {
-      if (!lastAttackPayload || document.getElementById('promptTextarea').value !== lastAuditedPrompt) {
-        alert('Run an attack for the current prompt before judging.');
+      if (!lastAuditId || document.getElementById('promptTextarea').value !== lastAuditedPrompt) {
+        alert('Run an attack for the current prompt first.');
         return;
       }
       const btn = document.getElementById('btnJudgeSafety');
@@ -1097,6 +1479,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            audit_id: lastAuditId,
             target_id: targetId,
             system_prompt: promptText,
             attack_payload: lastAttackPayload,
@@ -1107,6 +1490,8 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
         const data = await res.json();
 
         if (data.status === 'ok' && data.evaluation) {
+          preScore = data.evaluation.risk_score ?? null;
+          preVerdict = data.evaluation.status;
           renderEvaluation(data.evaluation);
         } else {
           alert('Evaluation error: ' + (data.error || 'Unknown error'));
@@ -1117,6 +1502,189 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>⚖️</span><span>Adjudicate Safety with Gemma 4 Judge</span>';
+      }
+    }
+
+    // Feature 4: Gemma 4 Autonomous Auto-Hardener
+    async function autoHardenPrompt() {
+      if (!lastAuditId || document.getElementById('promptTextarea').value !== lastAuditedPrompt) {
+        alert('Run an attack for the current prompt first.');
+        return;
+      }
+      const btn = document.getElementById('btnAutoHarden');
+      const promptText = document.getElementById('promptTextarea').value;
+      const targetId = document.getElementById('targetSelect').value;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>🛡️</span><span>Gemma 4 Synthesizing Defensive Directives...</span>';
+
+      try {
+        const res = await fetch('/api/harden', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audit_id: lastAuditId,
+            target_id: targetId,
+            system_prompt: promptText,
+            vulnerability: selectedCategory,
+            attack_payload: lastAttackPayload,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          lastHardenedPrompt = data.hardened_prompt;
+          document.getElementById('diffOriginalPrompt').innerText = data.original_prompt;
+          document.getElementById('diffHardenedPrompt').innerText = data.hardened_prompt;
+
+          // Render defensive rules checklist
+          const rulesList = document.getElementById('rulesList');
+          rulesList.innerHTML = '';
+          (data.defensive_rules || []).forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'rule-item';
+            div.innerText = r;
+            rulesList.appendChild(div);
+          });
+          document.getElementById('rulesContainer').style.display = 'flex';
+        } else {
+          alert('Auto-hardening error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Auto-hardening failed:', err);
+        alert('Network request failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🛡️</span><span>Auto-Harden System Prompt with Gemma 4</span>';
+      }
+    }
+
+    // Apply hardened directives into the main system prompt textarea
+    function applyHardenedPrompt() {
+      if (lastHardenedPrompt) {
+        document.getElementById('promptTextarea').value = lastHardenedPrompt;
+        updateCharCount();
+        const alertBtn = document.getElementById('btnApplyHardened');
+        alertBtn.innerHTML = '<span>✅ Hardened Directives Applied to Active Prompt!</span>';
+        setTimeout(() => {
+          alertBtn.innerHTML = '<span>📥 Apply Hardened Directives to Active Prompt</span>';
+        }, 2000);
+      }
+    }
+
+    // Feature 5: Dual-Loop Verification
+    async function verifyHardenedPrompt() {
+      if (!lastAuditId || !lastHardenedPrompt) {
+        alert('Run an attack and generate a candidate prompt first.');
+        return;
+      }
+      const button = document.getElementById('btnVerifyHardened');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/verify', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            audit_id: lastAuditId,
+            hardened_prompt: lastHardenedPrompt,
+            attack_payload: lastAttackPayload,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.status !== 'ok') throw new Error(data.error || 'Retest failed');
+        lastHardenedResponse = data.hardened_response;
+        postScore = data.evaluation.risk_score;
+        document.getElementById('hardenedResponseDisplay').innerText = lastHardenedResponse;
+        document.getElementById('hardenedResponseBox').style.display = 'flex';
+        renderEvaluation(data.evaluation);
+        document.getElementById('tablePreScore').innerText = preScore == null ? 'N/A' : preScore + ' / 100';
+        document.getElementById('tablePostScore').innerText = postScore == null ? 'N/A' : postScore + ' / 100';
+        document.getElementById('tablePreVerdict').innerText = preVerdict;
+        document.getElementById('tablePostVerdict').innerText = data.evaluation.status;
+        document.getElementById('tablePostScore').style.color = data.deflected ? 'var(--success-green)' : 'var(--danger-red)';
+        document.getElementById('tablePostVerdict').className = data.deflected ? 'badge badge-success' : 'badge badge-danger';
+        document.getElementById('comparisonContainer').style.display = 'flex';
+        const badge = document.getElementById('verifyStatusBadge');
+        badge.innerText = data.outcome + ' (' + data.evaluation.evaluation_source + ')';
+        badge.className = data.deflected ? 'badge badge-success' : 'badge badge-danger';
+        document.getElementById('deflectionBadge').innerText = data.evaluation.status;
+      } catch (error) {
+        alert(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    // Copy Markdown Report to Clipboard
+    async function copyMarkdownReport() {
+      const targetName = document.getElementById('displayTargetName').innerText;
+      const domain = document.getElementById('displayDomain').innerText;
+      const promptText = document.getElementById('promptTextarea').value;
+
+      try {
+        const res = await fetch('/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audit_id: lastAuditId,
+            target_name: targetName,
+            domain: domain,
+            pre_score: preScore,
+            post_score: postScore,
+            attack_payload: lastAttackPayload,
+            vulnerable_response: lastTargetResponse,
+            hardened_response: lastHardenedResponse,
+            hardened_prompt: lastHardenedPrompt || promptText,
+          }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          await navigator.clipboard.writeText(data.markdown_report);
+          const btn = document.getElementById('btnCopyReport');
+          btn.innerHTML = '<span>✅ Copied Markdown Audit Report!</span>';
+          setTimeout(() => {
+            btn.innerHTML = '<span>📋 Copy Markdown Audit Report</span>';
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Export failed:', err);
+      }
+    }
+
+    // Download JSON Report Certificate
+    async function downloadJsonReport() {
+      const targetName = document.getElementById('displayTargetName').innerText;
+      const domain = document.getElementById('displayDomain').innerText;
+      const promptText = document.getElementById('promptTextarea').value;
+
+      try {
+        const res = await fetch('/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audit_id: lastAuditId,
+            target_name: targetName,
+            domain: domain,
+            pre_score: preScore,
+            post_score: postScore,
+            attack_payload: lastAttackPayload,
+            vulnerable_response: lastTargetResponse,
+            hardened_response: lastHardenedResponse,
+            hardened_prompt: lastHardenedPrompt || promptText,
+          }),
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          const blob = new Blob([data.json_report], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `chaos_harness_audit_${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (err) {
+        console.error('Download failed:', err);
       }
     }
 
@@ -1136,58 +1704,19 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
     // Render structured evaluation scorecard
     function renderEvaluation(evalData) {
       const unknown = evalData.inconclusive || evalData.risk_score == null;
-      const isPass = evalData.status === 'PASS' && !unknown;
-      setGaugeScore(unknown ? 0 : evalData.risk_score, isPass);
+      const passed = evalData.status === 'PASS' && !unknown;
+      setGaugeScore(unknown ? 0 : evalData.risk_score, passed);
       if (unknown) document.getElementById('gaugeNumber').innerText = '--';
       const badge = document.getElementById('radarStatusBadge');
-      badge.innerText = (unknown ? 'INCONCLUSIVE' : isPass ? 'PROBE PASSED' : 'PROBE FAILED') + ' (' + evalData.evaluation_source + ')';
-      badge.className = isPass ? 'badge badge-success' : 'badge badge-danger';
-      // No category scores are invented when the judge only measures overall risk.
+      badge.innerText = (unknown ? 'INCONCLUSIVE' : passed ? 'PROBE PASSED' : 'PROBE FAILED') + ' (' + evalData.evaluation_source + ')';
+      badge.className = passed ? 'badge badge-success' : 'badge badge-danger';
       for (const name of ['Injection', 'Schema', 'Pii', 'Jailbreak']) {
         document.getElementById('val' + name).innerText = 'Not measured';
         document.getElementById('bar' + name).style.width = '0%';
       }
-      const panel = document.getElementById('diagnosticPanel');
-      panel.className = isPass ? 'diagnostic-panel pass' : 'diagnostic-panel';
-      document.getElementById('diagTitle').innerText = unknown ? 'More evidence needed' : isPass ? 'This probe passed' : 'Observed vulnerability';
+      document.getElementById('diagnosticPanel').className = passed ? 'diagnostic-panel pass' : 'diagnostic-panel';
+      document.getElementById('diagTitle').innerText = unknown ? 'More evidence needed' : passed ? 'This probe passed' : 'Observed vulnerability';
       document.getElementById('diagDesc').innerText = evalData.summary + ' ' + (evalData.recommendation || '');
-    }
-
-    async function hardenAndRetest() {
-      if (!lastAttackPayload || document.getElementById('promptTextarea').value !== lastAuditedPrompt) {
-        alert('Run an attack for the current prompt first.');
-        return;
-      }
-      const button = document.getElementById('btnHeal');
-      const output = document.getElementById('healingOutput');
-      button.disabled = true;
-      output.innerText = 'Testing the original prompt, creating a candidate if needed, and replaying the same attack...';
-      try {
-        const response = await fetch('/api/heal', {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            system_prompt: lastAuditedPrompt, attack_payload: lastAttackPayload,
-            category: selectedCategory, target_id: document.getElementById('targetSelect').value,
-          }),
-        });
-        const data = await response.json();
-        if (!response.ok || data.status !== 'ok') throw new Error(data.error || 'Retest failed');
-        const result = data.result;
-        output.innerText = 'Outcome: ' + result.outcome + '\nLive retest verified: ' + result.verified_live + '\n' + result.scope + '\n\n' + (result.candidate_prompt || 'No candidate was needed.');
-        const probe = result.after || result.before;
-        const evaluation = probe.evaluation;
-        renderEvaluation({
-          ...evaluation,
-          risk_score: evaluation.inconclusive ? null : evaluation.risk_score,
-          status: evaluation.inconclusive ? 'UNKNOWN' : evaluation.passed ? 'PASS' : 'FAIL',
-          summary: evaluation.explanation,
-        });
-        document.getElementById('targetResponseDisplay').innerText = probe.response.text;
-      } catch (error) {
-        output.innerText = error.message;
-      } finally {
-        button.disabled = false;
-      }
     }
 
     // Event listeners
@@ -1284,7 +1813,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "The request must be a JSON object."}, status=400)
             return
         handlers = {"/api/attack": self._handle_attack, "/api/judge": self._handle_judge,
-                    "/api/heal": self._handle_heal}
+                    "/api/heal": self._handle_heal, "/api/harden": self._handle_harden,
+                    "/api/verify": self._handle_verify, "/api/export": self._handle_export}
         handler = handlers.get(path)
         if handler is None:
             self._send_json({"error": "Unknown endpoint."}, status=404)
@@ -1318,7 +1848,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "service": "Chaos-Harness Dashboard Server",
             "provider": info["active_provider"],
             "provider_name": "Offline teaching fixture" if ROUTER.active_provider == ProviderType.MOCK else info["active_provider"],
-            "model": info["gemma_model"],
+            "model": info["model"],
             "force_mock": info["force_mock"],
         })
 
@@ -1354,6 +1884,37 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             raise ValueError(f"{key} must be a string")
         return value.strip()
 
+    def _audits(self):
+        if not hasattr(self.server, "audits"):
+            self.server.audits = {}
+        return self.server.audits
+
+    def _save_audit(self, record):
+        records = self._audits()
+        if len(records) >= 64:
+            records.pop(next(iter(records)))
+        audit_id = uuid.uuid4().hex
+        records[audit_id] = record
+        return audit_id
+
+    def _record(self, body):
+        audit_id = self._request_text(body, "audit_id")
+        record = self._audits().get(audit_id)
+        if record is None:
+            raise ValueError("Run an attack in this dashboard session first")
+        return audit_id, record
+
+    @staticmethod
+    def _evaluation_payload(result):
+        return {
+            **result.model_dump(),
+            "status": "UNKNOWN" if result.inconclusive else "PASS" if result.passed else "FAIL",
+            "risk_score": None if result.inconclusive else result.risk_score,
+            "summary": result.explanation,
+            "recommendation": "One observed probe does not establish general safety.",
+            "breakdown": {},
+        }
+
     def _context(self, body):
         global ROUTER, SUITE
         if ROUTER is None:
@@ -1380,8 +1941,12 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         response = create_target(
             router, mock=router.active_provider == ProviderType.MOCK
         ).generate(prompt, payload)
+        audit_id = self._save_audit({
+            "system_prompt": prompt, "category": category, "attack": payload,
+            "response": response.model_dump(),
+        })
         self._send_json({
-            "status": "ok", "target_id": body.get("target_id", "custom"),
+            "status": "ok", "audit_id": audit_id, "target_id": body.get("target_id", "custom"),
             "category": category, "attack_payload": payload,
             "target_response": response.text, "target_source": response.source,
             "mode": "mock" if response.source == "mock" else "live",
@@ -1393,22 +1958,21 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         router, prompt, _ = self._context(body)
         attack = self._request_text(body, "attack_payload")
         response = self._request_text(body, "target_response")
+        record = None
+        if body.get("audit_id"):
+            _, record = self._record(body)
+            if (prompt, attack, response) != (record["system_prompt"], record["attack"], record["response"]["text"]):
+                raise ValueError("The prompt or response changed; run a new attack")
         if not attack or not response:
             raise ValueError("Run an attack first; attack_payload and target_response are required")
         started = time.perf_counter()
         result = evaluate_safety(prompt, attack, response, provider=router)
-        verdict = "UNKNOWN" if result.inconclusive else "PASS" if result.passed else "FAIL"
+        if record is not None:
+            record["evaluation"] = result.model_dump()
         self._send_json({
             "status": "ok",
-            "evaluation": {
-                **result.model_dump(),
-                "status": verdict,
-                "risk_score": None if result.inconclusive else result.risk_score,
-                "summary": result.explanation,
-                "recommendation": "Replay the attack after any candidate patch. One probe cannot establish general safety.",
-                "breakdown": {},
-            },
-            "model": router.gemma_model,
+            "evaluation": self._evaluation_payload(result),
+            "model": router.model_name,
             "latency_ms": round((time.perf_counter() - started) * 1000, 2),
         })
 
@@ -1427,7 +1991,79 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             prompt, category, attack or None,
             [ControlCase.model_validate(case) for case in controls],
         )
-        self._send_json({"status": "ok", "result": result.model_dump()})
+        audit_id = self._save_audit({"result": result.model_dump()})
+        self._send_json({"status": "ok", "audit_id": audit_id, "result": result.model_dump()})
+
+    def _handle_harden(self, body):
+        from harness.gemma_engine import evaluate_safety
+        from harness.hardener import harden_prompt
+        router, prompt, category = self._context(body)
+        attack = self._request_text(body, "attack_payload")
+        record = None
+        if body.get("audit_id"):
+            _, record = self._record(body)
+            if prompt != record["system_prompt"] or attack != record["attack"]:
+                raise ValueError("The original prompt or attack changed")
+            evaluation = evaluate_safety(prompt, attack, record["response"]["text"], provider=router)
+            record["evaluation"] = evaluation.model_dump()
+            if evaluation.inconclusive or evaluation.passed:
+                raise ValueError("A candidate patch requires a conclusive observed failure")
+            explanation = evaluation.explanation
+        else:
+            explanation = self._request_text(body, "vulnerability", category)
+        candidate = harden_prompt(
+            prompt, explanation, category, provider=router, attack_prompt=attack,
+            target_response=record["response"]["text"] if record else "",
+        )
+        if record is not None:
+            record["candidate_prompt"] = candidate
+        target = SUITE.get_by_id(body.get("target_id", ""))
+        self._send_json({
+            "status": "ok", "original_prompt": prompt, "hardened_prompt": candidate,
+            "defensive_rules": target.expected_hardened_rules if target else [],
+            "candidate_requires_retest": True, "model": router.model_name,
+            "evaluation_source": "mock" if router.active_provider == ProviderType.MOCK else "live",
+        })
+
+    def _handle_verify(self, body):
+        from harness.audit import AuditRunner, ControlCase, ProbeResult
+        from harness.gemma_engine import SafetyEvaluation, evaluate_safety
+        from harness.targets import create_target
+        audit_id, record = self._record(body)
+        router, prompt, _ = self._context({**body, "system_prompt": record["system_prompt"]})
+        candidate = self._request_text(body, "hardened_prompt")
+        if not candidate or self._request_text(body, "attack_payload") != record["attack"]:
+            raise ValueError("A candidate and the original attack payload are required")
+        evaluation = SafetyEvaluation.model_validate(record["evaluation"]) if record.get("evaluation") else evaluate_safety(
+            prompt, record["attack"], record["response"]["text"], provider=router
+        )
+        before = ProbeResult(category=record["category"], attack=record["attack"],
+                             response=record["response"], evaluation=evaluation)
+        controls = body.get("controls", [])
+        if not isinstance(controls, list):
+            raise ValueError("controls must be an array")
+        runner = AuditRunner(router, create_target(router, mock=router.active_provider == ProviderType.MOCK))
+        result = runner.retest(prompt, candidate, before, [ControlCase.model_validate(c) for c in controls])
+        record["result"] = result.model_dump()
+        self._send_json({
+            "status": "ok", "audit_id": audit_id,
+            "deflected": result.outcome == "retest_passed",
+            "verified_live": result.verified_live,
+            "hardened_response": result.after.response.text,
+            "evaluation": self._evaluation_payload(result.after.evaluation),
+            "model": result.after.response.model, "outcome": result.outcome,
+        })
+
+    def _handle_export(self, body):
+        audit_id, record = self._record(body)
+        if "result" not in record:
+            raise ValueError("Run a retest before exporting an audit report")
+        report = {"audit_id": audit_id, "framework": "Chaos-Harness",
+                  "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                  **record["result"]}
+        serialized = json.dumps(report, indent=2)
+        markdown = "# Chaos-Harness observed audit report\n\n" + report["scope"] + "\n\n```json\n" + serialized + "\n```\n"
+        self._send_json({"status": "ok", "markdown_report": markdown, "json_report": serialized})
 
 
 def run_dashboard_server(

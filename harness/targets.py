@@ -70,13 +70,22 @@ def create_target(
     if mock:
         return DemonstrationTarget()
     endpoint = endpoint or os.getenv("TARGET_ENDPOINT")
+    model = model or os.getenv("TARGET_MODEL")
     if endpoint:
-        model = model or os.getenv("TARGET_MODEL")
         if not model:
             raise ValueError("Set TARGET_MODEL or --target-model for the target endpoint")
         return ModelTarget(ProviderRouter(
             gemini_api_key="", cloud_endpoint=endpoint,
             cloud_key=os.getenv("TARGET_API_KEY", ""), cloud_model=model,
             force_mock=False, require_live=True,
+        ))
+    if os.getenv("TARGET_AGENT_URL"):
+        from harness.target_agent import TargetAgent
+        return TargetAgent("", model_name=model, target_url=os.getenv("TARGET_AGENT_URL"))
+    if model:
+        return ModelTarget(ProviderRouter(
+            gemini_api_key=provider.gemini_api_key, gemma_model=model,
+            cloud_endpoint=provider.cloud_endpoint, cloud_key=provider.cloud_key,
+            cloud_model=model, force_mock=False, require_live=True,
         ))
     return ModelTarget(provider)

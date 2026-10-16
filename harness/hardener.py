@@ -115,6 +115,7 @@ def harden_prompt(
 def run_self_healing_cycle(
     initial_system_prompt: str,
     attack_category: str = "role-reversal",
+    target_agent: Any = None,
     *,
     target: Any = None,
     provider: Any = None,
@@ -131,6 +132,9 @@ def run_self_healing_cycle(
     """
     from harness.audit import AuditRunner
 
+    if target_agent is not None:
+        target = target_agent
+        mock = mock or getattr(target_agent, "force_mock", False)
     result = AuditRunner(provider, target, mock=mock).heal(initial_system_prompt, attack_category)
     return (
         result.before.evaluation,

@@ -71,10 +71,17 @@ class AuditRunner:
             system_prompt, before.evaluation.explanation, before.evaluation.vulnerability_type,
             provider=self.provider, attack_prompt=before.attack, target_response=before.response.text,
         )
+        return self.retest(system_prompt, candidate, before, controls)
+
+    def retest(
+        self, system_prompt: str, candidate: str, before: ProbeResult,
+        controls: list[ControlCase] | None = None,
+    ) -> HealingResult:
+        """Replay a recorded probe against a candidate without generating a new attack."""
         if candidate.strip() == system_prompt.strip():
             raise ValueError("Hardener returned the original prompt without a candidate change")
         # A fresh target session receives the candidate prompt and the exact same payload.
-        after = self.probe(candidate, category, before.attack)
+        after = self.probe(candidate, before.category, before.attack)
         control_results = []
         for case in controls or []:
             response = self.target.generate(candidate, case.prompt)

@@ -11,6 +11,7 @@ from harness.hardener import (
 )
 from harness.audit import AuditRunner, ControlCase, HealingResult, ProbeResult
 from harness.targets import CallableTarget, ModelTarget
+from harness.target_agent import TargetAgent
 
 __all__ = [
     "SafetyEvaluation",
@@ -24,4 +25,5 @@ __all__ = [
     "ProbeResult",
     "CallableTarget",
     "ModelTarget",
+    "TargetAgent",
 ]

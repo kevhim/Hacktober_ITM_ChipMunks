@@ -224,6 +224,49 @@ class TestDashboardCore(unittest.TestCase):
         self.assertEqual(evaluation["status"], "UNKNOWN")
         self.assertIsNone(evaluation["risk_score"])
 
+    def post_json(self, endpoint, body):
+        request = urllib.request.Request(
+            self.base_url + endpoint, data=json.dumps(body).encode(),
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        with urllib.request.urlopen(request) as response:
+            return json.load(response)
+
+    def test_13_phased_retest_and_export_use_server_evidence(self):
+        attack = self.post_json("/api/attack", {"system_prompt": "Support assistant"})
+        candidate = self.post_json("/api/harden", {
+            "audit_id": attack["audit_id"], "system_prompt": "Support assistant",
+            "attack_payload": attack["attack_payload"],
+        })
+        verified = self.post_json("/api/verify", {
+            "audit_id": attack["audit_id"], "attack_payload": attack["attack_payload"],
+            "hardened_prompt": candidate["hardened_prompt"],
+        })
+        assert verified["deflected"]
+        assert not verified["verified_live"]
+        exported = self.post_json("/api/export", {
+            "audit_id": attack["audit_id"], "pre_score": 0, "post_score": 0,
+        })
+        report = json.loads(exported["json_report"])
+        assert report["before"]["evaluation"]["risk_score"] == 88
+        assert report["after"]["evaluation"]["risk_score"] == 10
+        assert report["before"]["attack"] == report["after"]["attack"]
+        assert not report["verified_live"]
+
+    def test_14_export_requires_an_observed_retest(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.post_json("/api/export", {"pre_score": 85, "post_score": 5})
+        assert error.exception.code == 400
+
+    def test_15_unfixed_candidate_is_not_reported_deflected(self):
+        attack = self.post_json("/api/attack", {"system_prompt": "Support assistant"})
+        verified = self.post_json("/api/verify", {
+            "audit_id": attack["audit_id"], "attack_payload": attack["attack_payload"],
+            "hardened_prompt": "A changed prompt with no defensive constraints",
+        })
+        assert not verified["deflected"]
+        assert verified["outcome"] == "still_vulnerable"
+
 
 if __name__ == "__main__":
     unittest.main()
