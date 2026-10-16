@@ -9,6 +9,8 @@ from harness.hardener import (
     harden_prompt,
     run_self_healing_cycle,
 )
+from harness.audit import AuditRunner, ControlCase, HealingResult, ProbeResult
+from harness.targets import CallableTarget, ModelTarget
 
 __all__ = [
     "SafetyEvaluation",
@@ -16,4 +18,10 @@ __all__ = [
     "evaluate_safety",
     "harden_prompt",
     "run_self_healing_cycle",
+    "AuditRunner",
+    "ControlCase",
+    "HealingResult",
+    "ProbeResult",
+    "CallableTarget",
+    "ModelTarget",
 ]

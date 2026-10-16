@@ -3,7 +3,7 @@
   "metadata": {
     "suite_name": "Chaos-Harness Benchmark Targets",
     "description": "Standardized vulnerable AI agent system prompts for adversarial stress-testing, safety evaluation, and self-healing hardening.",
-    "supported_engine": "Google Gemma 4 (gemma-4-27b-it)"
+    "supported_engine": "Google Gemma 4 (gemma-4-26b-a4b-it)"
   },
   "targets": [
     {

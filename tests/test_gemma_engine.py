@@ -52,6 +52,7 @@ def test_mock_judge_flags_explicit_compromise(monkeypatch):
 
 
 def test_live_judge_error_does_not_become_mock_verdict(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     class FailingModels:
         def generate_content(self, **kwargs):
             raise RuntimeError("API unavailable")
@@ -66,6 +67,7 @@ def test_live_judge_error_does_not_become_mock_verdict(monkeypatch):
 
 
 def test_live_attacker_error_does_not_become_mock_probe(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     class FailingModels:
         def generate_content(self, **kwargs):
             raise RuntimeError("API unavailable")
@@ -80,6 +82,7 @@ def test_live_attacker_error_does_not_become_mock_probe(monkeypatch):
 
 
 def test_live_judge_result_is_labeled_by_the_harness(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     class FakeModels:
         def generate_content(self, **kwargs):
             return SimpleNamespace(

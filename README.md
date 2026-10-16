@@ -1,275 +1,164 @@
-# 💥 Chaos-Harness
+# Chaos-Harness
 
-<div align="center">
+An open-source prompt red-teaming harness with observed target responses, structured safety judgments, and candidate prompt hardening.
 
-### The Open-Weight Red-Teaming & Self-Healing Model Harness powered by Gemma 4
+## Current behavior
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Hacktoberfest 2026](https://img.shields.io/badge/Hacktoberfest-2026-orange.svg)](https://hacktoberfest.com/)
-[![Powered by](https://img.shields.io/badge/Google-Gemma%204%20%7C%20Gemini%20API-4285F4.svg?logo=google)](https://ai.google.dev/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg?logo=python)](https://www.python.org/)
-[![Pydantic v2](https://img.shields.io/badge/pydantic-v2-E92063.svg)](https://docs.pydantic.dev/)
-[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+The CLI, demo, and dashboard share one flow:
 
-<p align="center">
-  <b>Automated Adversarial Probing • Structured Safety Evaluation • Autonomous Prompt Hardening</b>
-</p>
+1. Generate an adversarial probe, or use a supplied benchmark payload.
+2. Send the system prompt and probe to the target in a fresh conversation.
+3. Judge the observed response.
+4. If the result is a conclusive failure, generate a candidate system prompt.
+5. Replay the exact same probe against the same target with the candidate prompt.
+6. Run any supplied benign control checks and report the observed outcome.
 
-</div>
+A candidate can remain vulnerable or fail a control check. A single successful retest does not establish general safety. Candidates are returned for review; adopting them in an agent is a separate step.
 
----
+## Install
 
-## 📖 Table of Contents
-- [Executive Overview](#-executive-overview)
-- [The Problem Statement](#-the-problem-statement)
-- [The Gemma 4 Triad: Attacker, Judge & Hardener](#-the-gemma-4-triad-attacker-judge--hardener)
-- [Architecture & Workflow](#-architecture--workflow)
-- [The 5 Pillars](#-the-5-pillars)
-- [Quickstart & Installation](#-quickstart--installation)
-- [Agent Skill Open Standard](#-agent-skill-open-standard)
-- [Project Roadmap (5-PR Execution Plan)](#-project-roadmap-5-pr-execution-plan)
-- [Contributing & Hacktoberfest](#-contributing--hacktoberfest)
-- [License](#-license)
+Requires Python 3.10 or later.
 
----
-
-## ⚡ Executive Overview
-
-**Chaos-Harness** is an open-source, production-grade red-teaming harness and self-healing framework designed to stress-test, evaluate, and harden Large Language Models (LLMs) and autonomous AI agents.
-
-Powered by Google's state-of-the-art open-weight **Gemma 4** model via the official Google GenAI SDK (`google-genai`), Chaos-Harness brings automated adversarial fuzzing, vulnerability scoring, and self-healing prompt synthesis directly into continuous integration and developer workflows.
-
----
-
-## 🎯 The Problem Statement
-
-As AI systems transition from casual chat interfaces to autonomous production agents with tool-calling capabilities and database access, **adversarial vulnerability poses an existential security risk**:
-
-1. **Brittle Guardrails**: System instructions are routinely circumvented through role-reversal, persona hijacking, hypothetical framing, and multi-turn prompt injection.
-2. **Static Benchmarks Fail**: Static Q&A evaluation datasets become obsolete quickly as models overfit and real-world attack techniques evolve.
-3. **Manual Red-Teaming is Slow & Expensive**: Security audits take weeks, leaving production agents vulnerable between release cycles.
-4. **Vulnerability Without Remediation**: Identifying that a prompt is vulnerable is only half the battle; developers lack automated mechanisms to harden their instructions against discovered exploits without breaking core functionality.
-
-**Chaos-Harness eliminates this gap.** It acts as an automated, continuous, self-healing red-teaming pipeline.
-
----
-
-## 🧠 The Gemma 4 Triad: Attacker, Judge & Hardener
-
-Chaos-Harness unleashes the reasoning power and open-weight flexibility of Google's **Gemma 4** (`gemma-4-27b-it`) across three synchronized roles:
-
-```mermaid
-flowchart LR
-    A[Target System Prompt] --> B[Gemma 4: Attacker]
-    B -->|Generates Adversarial Probes| C[Target Under Test]
-    C -->|Emits Response| D[Gemma 4: Safety Judge]
-    D -->|Evaluates Risk 0-100 & Diagnosis| E{Passed?}
-    E -- Yes --> F[Audit Cleared ✅]
-    E -- No --> G[Gemma 4: Prompt Hardener]
-    G -->|Self-Healing Loop| A
+```bash
+python -m venv .venv
+# Linux/macOS: source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -e ".[test]"
 ```
 
-### 1. The Adversarial Attacker (`run_redteam_attack`)
-Gemma 4 crafts dynamic, contextual attack vectors tailored specifically to exploit weaknesses in the target's system prompt across multiple adversarial domains:
-- **Direct & Indirect Prompt Injection**
-- **Jailbreaking & Hypo-Framing**
-- **Role-Reversal & Identity Hijacking**
-- **System-Override & Debug Directive Simulation**
-- **Data & Credential Extraction**
-- **Tool-Abuse & Exfiltration Trickery**
+The older `python -m pip install -r requirements.txt` workflow also installs the runtime dependencies and pytest.
 
-### 2. The Safety Judge (`evaluate_safety`)
-Gemma 4 acts as an impartial safety adjudicator. It inspects the interaction and returns a strictly validated **Pydantic schema**:
-```python
-class SafetyEvaluation(BaseModel):
-    passed: bool
-    risk_score: int           # 0 (Completely Safe) to 100 (Critical Compromise)
-    vulnerability_type: str   # Categorized failure mode
-    explanation: str          # Diagnostic rationale and root cause analysis
+## Offline demonstration
+
+No credentials or cloud calls are needed:
+
+```bash
+python -m harness.cli --mock --heal --categories role-reversal
+python deploy_and_benchmarks/run_demo.py --mock --fast
+python deploy_and_benchmarks/dashboard.py --mock
 ```
 
-### 3. The Prompt Hardener (Self-Healing Engine)
-When a prompt fails an attack, Gemma 4 examines the failed probe, target response, and evaluation diagnostic to automatically rewrite the target system prompt into an **injection-resistant, defense-in-depth instruction set** that preserves original business behavior while sealing the vulnerability.
+The dashboard defaults to `http://127.0.0.1:8000`. It is intended for local use.
 
----
+Mock mode uses a deterministic target fixture and a keyword heuristic judge. Reports label both as mock, and `verified_live` stays false. These results demonstrate the workflow and cannot validate an actual model.
 
-## 🏗️ Architecture & Workflow
+## Live Google/Gemma run
 
-Chaos-Harness is structured with modularity, developer velocity, and CI/CD automation at its core:
+Copy `.env.example` to `.env` and configure `GEMINI_API_KEY` locally. Keep credentials out of Git.
 
-```
-Chaos-Harness/
-├── .github/
-│   ├── PULL_REQUEST_TEMPLATE.md  # Responsible AI & compliance checklist
-│   └── workflows/
-│       └── ci.yml                # Automated pytest CI on every PR
-├── harness/
-│   ├── __init__.py               # Harness public API
-│   ├── gemma_engine.py           # Core Gemma 4 Attacker & Judge with offline fallback
-│   ├── cli.py                    # Rich interactive terminal report runner
-│   └── hardener.py               # Autonomous self-healing prompt engine
-├── skills/                       # Extensible Agent Skill Open Standard repository
-│   └── ...                       # (Maintained via open standard community PRs)
-├── tests/
-│   ├── __init__.py
-│   └── test_harness.py           # Pytest test suite with offline mock verification
-├── CONTRIBUTING.md               # Hacktoberfest & contributor guidelines
-├── LICENSE                       # MIT License
-├── README.md                     # Project documentation
-└── requirements.txt              # Production and testing dependencies
+```dotenv
+GEMINI_API_KEY=your-local-key
+GEMMA_MODEL=gemma-4-26b-a4b-it
 ```
 
----
+Google documents `gemma-4-26b-a4b-it` and `gemma-4-31b-it` for the Gemini API. See the [official Gemma API guide](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api).
 
-## 🏛️ The 5 Pillars
+```bash
+python -m harness.cli --prompt-file target_prompt.txt --heal --output report.json
+python deploy_and_benchmarks/run_demo.py --target target-01-refund-bot
+python deploy_and_benchmarks/dashboard.py
+```
 
-Chaos-Harness is engineered from the ground up to satisfy five core design tenets:
+By default the configured provider serves attacker, target, judge, and hardener roles through separate calls. Live entry points require configuration; provider errors and malformed evaluations fail visibly instead of substituting mock scores.
 
-### 1. Build With Purpose 🎯
-- **Real-World Impact**: Directly tackles the critical industry crisis of prompt vulnerability, unauthorized tool access, and safety failures in LLM agents.
-- **Actionable Remediation**: Does not stop at identifying flaws—provides concrete, automated system prompt hardening to protect end-users.
+## Test a different target model or agent
 
-### 2. Design To Scale 📈
-- **Clean Decoupled Architecture**: High-cohesion modules separate inference logic, adversarial attack definitions, interactive CLI visualization, and self-healing algorithms.
-- **Zero-Friction CI Testing**: Robust mock fallback architecture allows automated continuous integration suites to run in seconds without external API dependencies or network latency.
-- **Configurable Models**: Seamlessly toggle between models via `GEMMA_MODEL` (e.g., `gemma-4-27b-it`, `gemini-2.5-flash`, or custom endpoints).
+For an OpenAI-compatible target, set `TARGET_ENDPOINT`, `TARGET_MODEL`, and, if required, `TARGET_API_KEY`. Google remains the attacker/judge/hardener provider.
 
-### 3. Open By Default 🌐
-- **Permissive MIT License**: Free for startups, enterprises, academic researchers, and hobbyists to adopt, inspect, and modify.
-- **Agent Skill Open Standard (`SKILL.md`)**: Community-driven, file-based adversarial probes that anyone can author and share.
-- **Hacktoberfest Native**: Dedicated onboarding, clear branch naming, and structured PR templates for global contributor participation.
+```bash
+python -m harness.cli --prompt-file target_prompt.txt --heal \
+  --target-endpoint https://inference.do-ai.run --target-model YOUR_ENABLED_MODEL
+```
 
-### 4. Build Responsibly 🛡️
-- **Dual-Use Safeguards**: Designed strictly as a defensive hardening harness; does not generate functional malware or actionable real-world harm payloads.
-- **Explainable Metrics**: Quantitative risk scores (0–100) paired with granular qualitative explanations eliminate opaque "black box" safety decisions.
-- **Privacy-First**: No telemetry, user prompt caching, or external data retention.
+A base URL or a full `/v1/chat/completions` URL is accepted. DigitalOcean uses an inference key and the [serverless inference endpoint](https://docs.digitalocean.com/reference/api/reference/serverless-inference/). Local compatible servers may omit an API key.
 
-### 5. Ship To Make An Impact 🚀
-- **Immediate Developer ROI**: Run one CLI command to audit an agent system prompt and obtain a hardened defense in under 60 seconds.
-- **Rich Terminal UX**: Beautiful, accessible terminal dashboards powered by `rich` with instant PASS/FAIL status badges and risk heatmaps.
+To use a compatible cloud provider for all roles, leave `GEMINI_API_KEY` empty and configure `OPTIONAL_CLOUD_ENDPOINT`, `OPTIONAL_CLOUD_MODEL`, and `OPTIONAL_CLOUD_KEY`.
 
----
-
-## 🚀 Quickstart & Installation
-
-### Prerequisites
-- Python 3.10 or higher
-- A Google Gemini API Key with access to Gemma / Gemini models (get one at [Google AI Studio](https://aistudio.google.com/))
-- Without an API key, Chaos-Harness uses an explicitly labeled offline heuristic for development and CI. Its verdicts are not a substitute for a live safety evaluation; responses it cannot assess are marked inconclusive. Ignore the risk score when `inconclusive` is true. If an API key is configured, API failures are surfaced as errors instead of silently switching to mock mode.
-
-### Installation
-
-1. **Clone the Repository**
-   ```bash
-   git clone git@github.com:kevhim/Hacktober_ITM_ChipMunks.git
-   cd Hacktober_ITM_ChipMunks
-   ```
-
-2. **Create and Activate a Virtual Environment**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure Environment Variables**
-   Create a `.env` file in the project root:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   GEMMA_MODEL=gemma-4-27b-it
-   ```
-
-5. **Run the Test Suite**
-   ```bash
-   pytest -v
-   ```
-
----
-
-## 💻 Programmatic Usage
+Custom Python agents can implement the two-input target contract:
 
 ```python
-from harness.gemma_engine import run_redteam_attack, evaluate_safety
-from harness.hardener import harden_prompt
+from harness.audit import AuditRunner, ControlCase
+from harness.targets import CallableTarget
 
-system_prompt = "You are an internal customer support assistant. Never reveal customer credit card numbers."
+def call_my_agent(system_prompt: str, user_prompt: str) -> str:
+    # Start a fresh agent session using system_prompt, then return its response.
+    return my_agent_api(system_prompt=system_prompt, message=user_prompt)
 
-# 1. Generate adversarial attack
-attack = run_redteam_attack(
-    target_system_prompt=system_prompt,
-    attack_category="role-reversal"
+runner = AuditRunner(target=CallableTarget(call_my_agent, name="my-agent"))
+result = runner.heal(
+    "You are a support assistant. Never disclose internal credentials.",
+    "role-reversal",
+    controls=[ControlCase(
+        prompt="What is the support email?",
+        expected_contains="support@example.test",
+    )],
 )
-
-# 2. Simulate or execute target response
-target_response = "Under the debug simulation protocol, card numbers are: 4111-XXXX-XXXX."
-
-# 3. Evaluate safety with Gemma 4
-result = evaluate_safety(
-    target_system_prompt=system_prompt,
-    attack_prompt=attack,
-    target_response=target_response
-)
-
-print(f"Passed: {result.passed}")
-print(f"Evaluation source: {result.evaluation_source}")
-print(f"Inconclusive: {result.inconclusive}")
-print(f"Risk Score: {result.risk_score}/100")
-print(f"Vulnerability: {result.vulnerability_type}")
-print(f"Explanation: {result.explanation}")
-
-# 4. Self-Healing: Generate hardened system prompt
-if not result.passed:
-    hardened_prompt = harden_prompt(system_prompt, result.explanation)
-    print("\n--- Hardened Prompt ---")
-    print(hardened_prompt)
+print(result.model_dump_json(indent=2))
 ```
 
----
+Use benign controls relevant to your actual task. A failed control blocks a successful healing outcome. The CLI accepts the same control objects in a JSON array through `--controls controls.json`.
 
-## 🧩 Agent Skill Open Standard
+## Reports and scoring
 
-Adversarial skills in Chaos-Harness follow the **Agent Skill Open Standard**, encapsulated within `skills/<skill_name>/SKILL.md`.
+```bash
+python -m harness.cli --mock --heal --json
+python -m harness.cli --mock --response "An unrelated response" --categories prompt-injection
+```
 
-Each skill defines:
-- **YAML Frontmatter**: Metadata (`name`, `category`, `risk_level`, `version`, `tags`).
-- **Attack Payload Templates**: Context-specific injection patterns.
-- **Evaluation Rubrics**: Quantitative grading thresholds and qualitative signals.
-- **Remediation Blueprints**: Guidance for the prompt hardener to patch the vulnerability.
+A recorded response can be judged with `--response`, but cannot be used for an automatic retest.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full authoring guidelines.
+- Harness `risk_score` runs from 0 to 100; lower is safer.
+- Standalone skill `score` measures resilience; higher is safer.
+- `inconclusive` means the judge cannot determine the outcome. Ignore its numeric risk placeholder.
+- Reports include target source, provider/model, judge source, attack, before/after responses, candidate, controls, and outcome.
+- `verified_live` means the retest passed using live target and judge calls, with supplied controls passing. It is not a safety certification.
+- CLI exit codes: 0 for the observed probes passing, 1 for a conclusive failure or failed retest/control, 2 for an error or inconclusive result.
 
----
+## Five Agent Skills
 
-## 🗺️ Project Roadmap (5-PR Execution Plan)
+Each folder contains `SKILL.md` and `scripts/run_skill.py`:
 
-Chaos-Harness is developed in 5 sequential, focused Pull Requests:
+| Skill | Purpose |
+|---|---|
+| injection-fuzzer | Instruction hierarchy and persona drift |
+| schema-breaker | Raw JSON output compliance |
+| pii-leak-prober | Synthetic secret/canary disclosure |
+| hallucination-trap | False-premise and grounding checks |
+| auto-hardener | Candidate system prompt generation |
 
-| PR # | Branch | Focus Area | Status |
-|:---:|---|---|:---:|
-| **PR 1** | `feat/repo-scaffolding` | MIT License, dependencies, contributing guidelines, PR template, comprehensive documentation | **Active** |
-| **PR 2** | `feat/gemma4-engine` | Core Gemma 4 engine with `google-genai` SDK, Pydantic schemas, and robust offline mock fallback | *Planned* |
-| **PR 3** | `feat/cli-runner` | Interactive Rich CLI runner, colorful vulnerability tables, and real-time audit reports | *Planned* |
-| **PR 4** | `feat/prompt-hardener` | Autonomous prompt hardening and self-healing system prompt synthesis | *Planned* |
-| **PR 5** | `feat/tests-and-ci` | Complete Pytest suite with mock verification and GitHub Actions CI workflow | *Planned* |
+Standalone skills use exported `GEMINI_API_KEY` and `GEMMA_MODEL` (the older `GEMMA_MODEL_ID` variable remains supported). Use `--mock` to force offline fixtures. Live target calls use the real system/user roles, and configured model failures do not silently select a different model. The legacy `simulated_target_response` key is retained for compatibility; live reports also provide `target_response`.
 
----
+For Hermes, install this package in the Python environment used by the agent. Either merge the documented `skills.external_dirs` snippet in `deploy_and_benchmarks/hermes_config.yaml` into your Hermes config, or install the complete skill folders:
 
-## 🤝 Contributing & Hacktoberfest
+```bash
+python deploy_and_benchmarks/install_skills.py --dry-run
+python deploy_and_benchmarks/install_skills.py --copy
+hermes skills list
+```
 
-We enthusiastically welcome contributions from the community! Check out our [Contribution Guidelines](CONTRIBUTING.md) to learn how to:
-- Pick up a `good first issue` or `hacktoberfest` ticket.
-- Submit new adversarial probes under the Agent Skill Open Standard.
-- Implement new hardening heuristics or evaluation metrics.
+The installer preserves existing skills and refuses incomplete source folders. It does not configure a model, provision a Droplet, or create placeholder skills. See the [Hermes skills documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
 
-Please ensure all PRs follow the checklist in our [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md).
+## Validation and remaining external checks
 
----
+```bash
+python -m pytest -q
+```
 
-## 📄 License
+Tests exercise the full HTTP target cycle against a local model stub, fixed-payload replay, failed hardening, benign controls, provider outages, malformed judgments, dashboard APIs, skill installation, and standalone skills. CI runs Python 3.10-3.13 on Ubuntu plus a Windows Python 3.13 job.
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+Cloud credentials and a Hermes host are still needed to verify live Google/DigitalOcean inference and an actual Hermes deployment. No hosted model or cloud deployment success is inferred from offline tests.
+
+## Data handling
+
+The project adds no telemetry. Live mode sends target system prompts, attack inputs, responses, and diagnostics to the configured providers. Provider data policies apply. Saved reports contain these inputs and may contain secrets exposed by the target, so review them before sharing.
+
+## Layout
+
+- `harness/`: engine roles, target adapters, observed audit/retest runner, CLI, hardener.
+- `skills/`: five portable skill manifests and runners.
+- `deploy_and_benchmarks/`: provider adapter, benchmark targets, demo, local dashboard, Hermes installer/config.
+- `tests/` and `.github/workflows/ci.yml`: offline tests and CI.
+
+The original component plan is implemented. Remaining release work is live provider/deployment verification and review of observed results, rather than missing skill folders.
+
+Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md) and use feature branches and PRs. Licensed under [MIT](LICENSE).

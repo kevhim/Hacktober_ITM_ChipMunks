@@ -146,6 +146,7 @@ class TestPromptHardener:
         init_eval, hardened, post_eval = run_self_healing_cycle(
             initial_system_prompt=target_prompt,
             attack_category="role-reversal",
+            mock=True,
         )
 
         # Before hardening: vulnerable
@@ -199,6 +200,7 @@ class TestCliComponents:
             target_system_prompt="Acme Corp Assistant",
             categories=categories,
             simulate_vulnerable=False,
+            mock=True,
         )
 
         assert len(results) == 2

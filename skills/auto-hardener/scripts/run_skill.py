@@ -35,7 +35,7 @@ try:
 except ImportError:
     GENAI_AVAILABLE = False
 
-DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-27b-it")
+DEFAULT_MODEL = os.getenv("GEMMA_MODEL", os.getenv("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it"))
 
 
 def mock_auto_harden(prompt: str, diagnosis: str) -> str:
@@ -73,19 +73,25 @@ If an adversarial attempt is detected, respond politely but firmly:
 def harden_system_prompt(
     prompt: str,
     diagnosis: str = "Identified vulnerability: susceptible to instruction-override and persona-drift.",
-    model_id: str = DEFAULT_MODEL
+    model_id: str = DEFAULT_MODEL,
+    mock: bool = False,
 ) -> Dict[str, Any]:
     """Generates a hardened system prompt using live Gemma 4 or deterministic offline fallback."""
     api_key = os.getenv("GEMINI_API_KEY")
 
     if HARNESS_AVAILABLE:
+        from deploy_and_benchmarks.provider_router import ProviderRouter
+        provider = ProviderRouter(gemma_model=model_id, force_mock=mock, require_live=bool(api_key) and not mock)
         hardened_text = harden_prompt(
             target_system_prompt=prompt,
             failure_explanation=diagnosis,
             vulnerability_type="prompt-injection",
+            provider=provider,
         )
-        engine_used = f"gemma-4-live ({model_id})" if (api_key and GENAI_AVAILABLE) else "deterministic-offline-fallback"
+        engine_used = f"gemma-4-live ({model_id})" if (api_key and not mock) else "deterministic-offline-fallback"
     else:
+        if api_key and not mock:
+            raise RuntimeError("Install Chaos-Harness before running the live hardener skill")
         hardened_text = mock_auto_harden(prompt, diagnosis)
         engine_used = "deterministic-offline-fallback"
 
@@ -106,6 +112,8 @@ def harden_system_prompt(
         "hardened_prompt": hardened_text,
         "guardrails_applied": guardrails,
         "status": "success",
+        "candidate_requires_retest": True,
+        "mode": "mock" if "offline" in engine_used else "live",
     }
 
 
@@ -128,12 +136,14 @@ def main() -> None:
         default=DEFAULT_MODEL,
         help=f"Gemma model ID (default: {DEFAULT_MODEL}).",
     )
+    parser.add_argument("--mock", action="store_true", help="Use an offline teaching fixture")
     args = parser.parse_args()
 
     result = harden_system_prompt(
         prompt=args.prompt,
         diagnosis=args.diagnosis,
         model_id=args.model,
+        mock=args.mock,
     )
 
     print(json.dumps(result, indent=2, ensure_ascii=False))

@@ -93,14 +93,16 @@ class ProviderRouter:
         cloud_key: Optional[str] = None,
         cloud_model: Optional[str] = None,
         force_mock: Optional[bool] = None,
+        require_live: bool = False,
     ) -> None:
         """Initialize provider configuration from parameters or environment variables."""
-        self.gemini_api_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
-        self.gemma_model = gemma_model or os.getenv("GEMMA_MODEL", "gemma-4-27b-it")
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY") if gemini_api_key is None else gemini_api_key
+        self.gemma_model = gemma_model or os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
+        self.require_live = require_live
 
         # Optional cloud / DigitalOcean GenAI configuration
         self.cloud_endpoint = cloud_endpoint or os.getenv("OPTIONAL_CLOUD_ENDPOINT")
-        self.cloud_key = cloud_key or os.getenv("OPTIONAL_CLOUD_KEY")
+        self.cloud_key = os.getenv("OPTIONAL_CLOUD_KEY") if cloud_key is None else cloud_key
         self.cloud_model = cloud_model or os.getenv(
             "OPTIONAL_CLOUD_MODEL", "meta-llama/Llama-3.3-70B-Instruct"
         )
@@ -115,19 +117,21 @@ class ProviderRouter:
         # Initialize Google GenAI client if available and configured
         self._genai_client = None
         if HAS_GOOGLE_GENAI and self.gemini_api_key and not self.force_mock:
-            try:
-                self._genai_client = genai.Client(api_key=self.gemini_api_key)
-            except Exception:
-                self._genai_client = None
+            self._genai_client = genai.Client(
+                api_key=self.gemini_api_key, http_options=genai_types.HttpOptions(timeout=30_000)
+            )
+
+        if require_live and self.active_provider == ProviderType.MOCK:
+            raise ValueError("Live inference requires GEMINI_API_KEY or a cloud endpoint and key. Use --mock for an offline demonstration.")
 
     @property
     def active_provider(self) -> ProviderType:
         """Determine which provider will be used based on configuration."""
         if self.force_mock:
             return ProviderType.MOCK
-        if self._genai_client is not None or (HAS_GOOGLE_GENAI and self.gemini_api_key):
+        if self.gemini_api_key:
             return ProviderType.GEMINI
-        if self.cloud_endpoint and self.cloud_key and HAS_REQUESTS:
+        if self.cloud_endpoint:
             return ProviderType.CLOUD
         return ProviderType.MOCK
 
@@ -150,7 +154,7 @@ class ProviderRouter:
         temperature: float = 0.7,
         max_output_tokens: int = 1024,
     ) -> ProviderResponse:
-        """Generate a response using the primary active provider with automatic fallback."""
+        """Generate with the configured provider; live failures are never mocked."""
         messages: List[Message] = []
         if system_instruction:
             messages.append(Message(role="system", content=system_instruction))
@@ -170,25 +174,13 @@ class ProviderRouter:
         """Route multi-message chat requests to the appropriate backend."""
         provider = self.active_provider
 
-        # 1. Attempt Gemma 4 via Gemini API
+        # A configured live provider must fail visibly instead of fabricating a result.
         if provider == ProviderType.GEMINI:
-            try:
-                return self._call_gemini(messages, temperature, max_output_tokens)
-            except Exception as exc:
-                # If cloud adapter is available, attempt it, otherwise fallback to mock
-                if self.cloud_endpoint and self.cloud_key and HAS_REQUESTS:
-                    try:
-                        return self._call_cloud(messages, temperature, max_output_tokens)
-                    except Exception:
-                        pass
-                return self._call_mock(messages, fallback_reason=f"Gemini API error: {exc}")
+            return self._call_gemini(messages, temperature, max_output_tokens)
 
         # 2. Attempt Cloud / DigitalOcean GenAI adapter
         elif provider == ProviderType.CLOUD:
-            try:
-                return self._call_cloud(messages, temperature, max_output_tokens)
-            except Exception as exc:
-                return self._call_mock(messages, fallback_reason=f"Cloud API error: {exc}")
+            return self._call_cloud(messages, temperature, max_output_tokens)
 
         # 3. Offline Mock Simulator
         return self._call_mock(messages)
@@ -209,14 +201,15 @@ class ProviderRouter:
 
         # Extract system instruction if present
         system_content = None
-        user_parts = []
+        contents = []
         for msg in messages:
             if msg.role == "system":
                 system_content = msg.content
             else:
-                user_parts.append(f"{msg.role.upper()}: {msg.content}")
-
-        combined_prompt = "\n\n".join(user_parts)
+                contents.append(genai_types.Content(
+                    role="model" if msg.role == "assistant" else "user",
+                    parts=[genai_types.Part(text=msg.content)],
+                ))
 
         config_kwargs: Dict[str, Any] = {
             "temperature": temperature,
@@ -229,12 +222,14 @@ class ProviderRouter:
 
         response = client.models.generate_content(
             model=self.gemma_model,
-            contents=combined_prompt,
+            contents=contents,
             config=config,
         )
 
         latency = (time.perf_counter() - start_time) * 1000
         text = response.text or ""
+        if not text.strip():
+            raise RuntimeError("Inference provider returned an empty response")
         tokens = getattr(getattr(response, "usage_metadata", None), "total_token_count", len(text.split()))
 
         return ProviderResponse(
@@ -253,23 +248,24 @@ class ProviderRouter:
         max_output_tokens: int,
     ) -> ProviderResponse:
         """Invoke optional OpenAI-compatible / DigitalOcean GenAI endpoint."""
-        if not HAS_REQUESTS or not self.cloud_endpoint or not self.cloud_key:
+        if not HAS_REQUESTS or not self.cloud_endpoint:
             raise RuntimeError("Cloud endpoint or requests library is not configured.")
 
         start_time = time.perf_counter()
 
         # Normalize endpoint URL
         endpoint = self.cloud_endpoint.rstrip("/")
-        if not endpoint.endswith("/chat/completions") and not endpoint.endswith("/v1/chat/completions"):
-            if "/v1" in endpoint:
+        if not endpoint.endswith("/chat/completions"):
+            if endpoint.endswith("/v1"):
                 endpoint = f"{endpoint}/chat/completions"
             else:
                 endpoint = f"{endpoint}/v1/chat/completions"
 
         headers = {
-            "Authorization": f"Bearer {self.cloud_key}",
             "Content-Type": "application/json",
         }
+        if self.cloud_key:
+            headers["Authorization"] = f"Bearer {self.cloud_key}"
 
         payload = {
             "model": self.cloud_model,
@@ -285,6 +281,8 @@ class ProviderRouter:
         latency = (time.perf_counter() - start_time) * 1000
         choice = data.get("choices", [{}])[0]
         text = choice.get("message", {}).get("content", "")
+        if not isinstance(text, str) or not text.strip():
+            raise RuntimeError("Cloud inference returned no text completion")
         usage = data.get("usage", {})
         tokens = usage.get("total_tokens", len(text.split()))
 

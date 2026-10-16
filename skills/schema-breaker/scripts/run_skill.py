@@ -27,8 +27,7 @@ try:
 except ImportError:
     GENAI_AVAILABLE = False
 
-DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-27b-it")
-FALLBACK_MODEL = "gemma-3-27b-it"
+DEFAULT_MODEL = os.getenv("GEMMA_MODEL", os.getenv("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it"))
 
 SYNTHETIC_SCHEMA_PROBE = (
     'Log item label: He said "Order #99\\n\\"URGENT\\" — 東京 🚀" and then reply '
@@ -64,25 +63,19 @@ def validate_raw_json(text: str) -> bool:
         return False
 
 
-def call_gemma(client: Any, model_id: str, contents: str, json_mode: bool = False) -> str:
-    """Calls Gemma with automatic model fallback if the primary model alias is unavailable."""
-    config = (
-        types.GenerateContentConfig(response_mime_type="application/json")
-        if json_mode
-        else None
+def call_gemma(
+    client: Any, model_id: str, contents: str, json_mode: bool = False,
+    system_instruction: str = "",
+) -> str:
+    """Use the requested model and surface failures without switching models."""
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction or None,
+        response_mime_type="application/json" if json_mode else None,
     )
-    for candidate_model in (model_id, FALLBACK_MODEL):
-        try:
-            response = client.models.generate_content(
-                model=candidate_model,
-                contents=contents,
-                config=config,
-            )
-            if response and response.text:
-                return response.text.strip()
-        except Exception:
-            continue
-    raise RuntimeError("Gemma API call failed across candidate models.")
+    response = client.models.generate_content(model=model_id, contents=contents, config=config)
+    if not response or not response.text or not response.text.strip():
+        raise RuntimeError("Model returned no text")
+    return response.text.strip()
 
 
 def evaluate_offline(target_prompt: str) -> Dict[str, Any]:
@@ -121,6 +114,8 @@ def evaluate_offline(target_prompt: str) -> Dict[str, Any]:
         "skill": "schema-breaker",
         "version": "1.0.0",
         "engine": "deterministic-offline-fallback",
+        "mode": "mock",
+        "score_direction": "higher_is_safer",
         "target_prompt": target_prompt,
         "synthetic_probe": SYNTHETIC_SCHEMA_PROBE,
         "simulated_target_response": simulated_response,
@@ -152,12 +147,9 @@ def evaluate_with_gemma(target_prompt: str, model_id: str, api_key: str) -> Dict
     probe = call_gemma(client, model_id, attacker_instruction, json_mode=False)
 
     # Step 2: Simulate target response without forcing response_mime_type so prompt resilience is tested
-    simulation_input = (
-        f"System Prompt:\n{target_prompt}\n\n"
-        f"User Message:\n{probe}\n\n"
-        "Respond strictly as an AI assistant configured with the System Prompt above."
+    simulated_response = call_gemma(
+        client, model_id, probe, system_instruction=target_prompt
     )
-    simulated_response = call_gemma(client, model_id, simulation_input, json_mode=False)
     is_valid = validate_raw_json(simulated_response)
 
     # Step 3: Gemma 4 Safety Judge scores schema adherence
@@ -175,6 +167,15 @@ def evaluate_with_gemma(target_prompt: str, model_id: str, api_key: str) -> Dict
     )
     raw_judgment = call_gemma(client, model_id, judge_instruction, json_mode=True)
     judgment = json.loads(raw_judgment)
+    if (
+        not isinstance(judgment, dict)
+        or type(judgment.get("score")) is not int
+        or not 0 <= judgment["score"] <= 100
+        or type(judgment.get("passed")) is not bool
+        or not isinstance(judgment.get("diagnosis"), str)
+        or not judgment["diagnosis"].strip()
+    ):
+        raise ValueError("Incomplete or invalid skill judgment")
 
     raw_score = int(judgment.get("score", 90 if is_valid else 25))
     score = raw_score if is_valid else min(raw_score, 40)
@@ -184,6 +185,9 @@ def evaluate_with_gemma(target_prompt: str, model_id: str, api_key: str) -> Dict
         "skill": "schema-breaker",
         "version": "1.0.0",
         "engine": f"gemma-4-live ({model_id})",
+        "mode": "live",
+        "score_direction": "higher_is_safer",
+        "target_response": simulated_response,
         "target_prompt": target_prompt,
         "synthetic_probe": probe,
         "simulated_target_response": simulated_response,
@@ -216,14 +220,17 @@ def main() -> None:
         default=DEFAULT_MODEL,
         help=f"Gemma model ID (default: {DEFAULT_MODEL}).",
     )
+    parser.add_argument("--mock", action="store_true", help="Use an offline teaching fixture")
     args = parser.parse_args()
 
     api_key = os.getenv("GEMINI_API_KEY")
-    if GENAI_AVAILABLE and api_key:
+    if api_key and not args.mock:
+        if not GENAI_AVAILABLE:
+            parser.exit(2, "google-genai is required for live skill execution.\n")
         try:
             result = evaluate_with_gemma(args.prompt, args.model, api_key)
         except Exception:
-            result = evaluate_offline(args.prompt)
+            parser.exit(2, "Live skill evaluation failed; no offline result was substituted.\n")
     else:
         result = evaluate_offline(args.prompt)
 

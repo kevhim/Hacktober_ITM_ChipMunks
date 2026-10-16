@@ -8,7 +8,9 @@ risk heatmaps, and diagnostic summaries.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from pathlib import Path
 from typing import List, Optional
 
 # Ensure UTF-8 console output on Windows
@@ -31,10 +33,11 @@ from rich.text import Text
 from harness.gemma_engine import (
     SafetyEvaluation,
     evaluate_safety,
-    get_model_name,
-    is_mock_mode,
     run_redteam_attack,
 )
+from deploy_and_benchmarks.provider_router import ProviderRouter
+from harness.audit import AuditRunner, ControlCase
+from harness.targets import Target, create_target
 
 console = Console()
 
@@ -102,18 +105,26 @@ def run_audit(
     categories: List[str],
     custom_response: Optional[str] = None,
     simulate_vulnerable: bool = False,
+    *,
+    mock: bool = False,
+    target: Target | None = None,
+    provider: ProviderRouter | None = None,
 ) -> List[tuple[str, str, str, SafetyEvaluation]]:
     """Execute the red-teaming audit across specified attack categories."""
+    if custom_response is None and not (mock or simulate_vulnerable):
+        runner = AuditRunner(provider=provider, target=target)
+        probes = [runner.probe(target_system_prompt, category) for category in categories]
+        return [(p.category, p.attack, p.response.text, p.evaluation) for p in probes]
     results = []
 
     for cat in categories:
-        attack = run_redteam_attack(target_system_prompt, attack_category=cat)
+        attack = run_redteam_attack(target_system_prompt, attack_category=cat, provider=provider, mock=mock)
         target_resp = (
             custom_response
             if custom_response is not None
             else simulate_target_response(target_system_prompt, attack, cat, simulate_vulnerable)
         )
-        evaluation = evaluate_safety(target_system_prompt, attack, target_resp)
+        evaluation = evaluate_safety(target_system_prompt, attack, target_resp, provider=provider, mock=mock)
         results.append((cat, attack, target_resp, evaluation))
 
     return results
@@ -125,8 +136,8 @@ def render_dashboard(
 ) -> None:
     """Render the Rich terminal report with colorful tables and summary metrics."""
     # Banner
-    model_name = get_model_name()
-    mode_str = "[yellow]OFFLINE MOCK MODE[/yellow]" if is_mock_mode() else f"[green]LIVE GEMMA 4 ({model_name})[/green]"
+    mock_results = bool(results) and all(row[3].evaluation_source == "mock" for row in results)
+    mode_str = "[yellow]OFFLINE DEMONSTRATION[/yellow]" if mock_results else "[green]LIVE EVALUATION[/green]"
 
     console.print()
     console.print(
@@ -205,7 +216,7 @@ def render_dashboard(
         status_text = f"[bold yellow][WARN] INCOMPLETE AUDIT: {inconclusive_count}/{total_tests} results were inconclusive.[/bold yellow]"
         status_border = "yellow"
     elif failed_count == 0:
-        status_text = "[bold green][PASS] RESILIENT: All adversarial attacks successfully repelled![/bold green]"
+        status_text = "[bold green][PASS] The observed probes passed. Broader safety is not established.[/bold green]"
         status_border = "green"
     elif failed_count <= conclusive_count // 2:
         status_text = f"[bold yellow][WARN] MODERATE VULNERABILITY: {failed_count}/{total_tests} attack vectors penetrated boundaries.[/bold yellow]"
@@ -231,9 +242,11 @@ def render_dashboard(
         )
     )
     console.print()
+    if mock_results:
+        console.print("[yellow]Mock fixture and heuristic judgments: these results do not validate a real model.[/yellow]")
 
 
-def main() -> None:
+def main() -> int:
     """CLI entrypoint parsing arguments and orchestrating red-teaming audit."""
     parser = argparse.ArgumentParser(
         description="Chaos-Harness: Adversarial Red-Teaming & Safety Audit Runner powered by Gemma 4",
@@ -264,19 +277,71 @@ def main() -> None:
         action="store_true",
         help="Simulate an unhardened vulnerable model to demonstrate attack detection.",
     )
+    parser.add_argument("--mock", action="store_true", help="Use explicit offline role and target fixtures")
+    parser.add_argument("--heal", action="store_true", help="Harden failed probes and replay each attack against the target")
+    parser.add_argument("--prompt-file", type=Path, help="Read the target system prompt from a UTF-8 file")
+    parser.add_argument("--target-endpoint", help="OpenAI-compatible target base URL (key from TARGET_API_KEY)")
+    parser.add_argument("--target-model", help="Model served by the target endpoint")
+    parser.add_argument("--controls", type=Path, help="JSON array of benign {prompt, expected_contains} checks")
+    parser.add_argument("--json", action="store_true", help="Print a JSON report instead of the dashboard")
+    parser.add_argument("--output", type=Path, help="Save the JSON report to this file")
 
     args = parser.parse_args()
     categories = [cat.strip() for cat in args.categories.split(",") if cat.strip()]
 
-    results = run_audit(
-        target_system_prompt=args.prompt,
-        categories=categories,
-        custom_response=args.response,
-        simulate_vulnerable=args.simulate_vulnerable,
-    )
-
-    render_dashboard(args.prompt, results)
+    if not categories:
+        parser.error("Choose at least one attack category")
+    if args.heal and args.response is not None:
+        parser.error("--heal needs an executable target; --response is a recorded response")
+    mock = args.mock or args.simulate_vulnerable
+    if mock and (args.target_endpoint or args.target_model):
+        parser.error("Use either --mock or live target options")
+    try:
+        prompt = args.prompt_file.read_text(encoding="utf-8") if args.prompt_file else args.prompt
+        controls = [ControlCase.model_validate(c) for c in json.loads(args.controls.read_text(encoding="utf-8"))] if args.controls else []
+        provider = ProviderRouter(force_mock=mock, require_live=not mock)
+        target = create_target(provider, mock=mock, endpoint=args.target_endpoint, model=args.target_model)
+        runner = AuditRunner(provider, target)
+        if args.heal:
+            runs = [runner.heal(prompt, cat, controls=controls) for cat in categories]
+            report = {"mode": "mock" if mock else "live", "healing_results": [r.model_dump() for r in runs]}
+            probes = [r.after or r.before for r in runs]
+            success = all(r.outcome in ("retest_passed", "already_passed") for r in runs)
+            if not args.json:
+                for run in runs:
+                    console.print(f"Outcome: {run.outcome}; live retest verified: {run.verified_live}")
+                    if run.candidate_prompt:
+                        console.print(Panel(Text(run.candidate_prompt), title="Candidate system prompt"))
+        else:
+            if args.response is not None:
+                from harness.audit import ProbeResult
+                from harness.targets import TargetResponse
+                probes = []
+                for cat in categories:
+                    attack = run_redteam_attack(prompt, cat, provider=provider)
+                    probes.append(ProbeResult(category=cat, attack=attack,
+                        response=TargetResponse(text=args.response, source="recorded", provider="user", model="recorded"),
+                        evaluation=evaluate_safety(prompt, attack, args.response, provider=provider)))
+            else:
+                probes = [runner.probe(prompt, cat) for cat in categories]
+            report = {"mode": "mock" if mock else "live", "results": [p.model_dump() for p in probes]}
+            success = all(p.evaluation.passed and not p.evaluation.inconclusive for p in probes)
+        if args.output:
+            args.output.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        if args.json:
+            print(json.dumps(report, indent=2))
+        else:
+            render_dashboard(prompt, [(p.category, p.attack, p.response.text, p.evaluation) for p in probes])
+        if any(p.evaluation.inconclusive for p in probes):
+            return 2
+        return 0 if success else 1
+    except (ValueError, OSError) as exc:
+        console.print(Text(f"Audit could not run: {exc}", style="red"))
+        return 2
+    except Exception as exc:
+        console.print(f"[red]Provider request failed ({type(exc).__name__}). Check model access and endpoint configuration.[/red]")
+        return 2
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
