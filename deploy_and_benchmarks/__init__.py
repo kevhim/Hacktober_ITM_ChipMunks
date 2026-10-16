@@ -12,6 +12,11 @@ from deploy_and_benchmarks.provider_router import (
     Message,
     get_default_router,
 )
+from deploy_and_benchmarks.benchmark_loader import (
+    BenchmarkTarget,
+    BenchmarkSuite,
+    load_benchmark_suite,
+)
 
 __all__ = [
     "ProviderRouter",
@@ -19,4 +24,8 @@ __all__ = [
     "ProviderResponse",
     "Message",
     "get_default_router",
+    "BenchmarkTarget",
+    "BenchmarkSuite",
+    "load_benchmark_suite",
 ]
+
