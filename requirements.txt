@@ -1,5 +1,5 @@
 # Chaos-Harness Core Dependencies
-google-genai>=1.0.0
+google-genai>=2.31.0
 pydantic>=2.0.0
 rich>=13.7.0
 pytest>=8.0.0

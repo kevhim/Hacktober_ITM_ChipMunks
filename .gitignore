@@ -37,3 +37,6 @@ venv.bak/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local live-run evidence and generated prompts
+/reports/

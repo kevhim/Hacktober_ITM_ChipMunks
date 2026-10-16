@@ -94,11 +94,13 @@ class ProviderRouter:
         cloud_model: Optional[str] = None,
         force_mock: Optional[bool] = None,
         require_live: bool = False,
+        cloud_response_format: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize provider configuration from parameters or environment variables."""
         self.gemini_api_key = os.getenv("GEMINI_API_KEY") if gemini_api_key is None else gemini_api_key
         self.gemma_model = gemma_model or os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
         self.require_live = require_live
+        self.cloud_response_format = cloud_response_format
 
         # Optional cloud / DigitalOcean GenAI configuration
         self.cloud_endpoint = cloud_endpoint or os.getenv("OPTIONAL_CLOUD_ENDPOINT")
@@ -118,7 +120,13 @@ class ProviderRouter:
         self._genai_client = None
         if HAS_GOOGLE_GENAI and self.gemini_api_key and not self.force_mock:
             self._genai_client = genai.Client(
-                api_key=self.gemini_api_key, http_options=genai_types.HttpOptions(timeout=30_000)
+                api_key=self.gemini_api_key, http_options=genai_types.HttpOptions(
+                    timeout=45_000,
+                    retry_options=genai_types.HttpRetryOptions(
+                        attempts=2, initial_delay=0.5, max_delay=2,
+                        http_status_codes=[429, 500, 502, 503, 504],
+                    ),
+                )
             )
 
         if require_live and self.active_provider == ProviderType.MOCK:
@@ -226,6 +234,9 @@ class ProviderRouter:
         }
         if system_content:
             config_kwargs["system_instruction"] = system_content
+        if self.gemma_model.startswith("gemma-4-"):
+            # Gemma 4 defaults can spend the request deadline on reasoning.
+            config_kwargs["thinking_config"] = genai_types.ThinkingConfig(thinking_level="minimal")
 
         config = genai_types.GenerateContentConfig(**config_kwargs)
 
@@ -282,6 +293,8 @@ class ProviderRouter:
             "temperature": temperature,
             "max_tokens": max_output_tokens,
         }
+        if self.cloud_response_format is not None:
+            payload["response_format"] = self.cloud_response_format
 
         resp = requests.post(endpoint, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()

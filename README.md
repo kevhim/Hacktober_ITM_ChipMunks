@@ -63,6 +63,27 @@ By default the configured provider serves attacker, target, judge, and hardener 
 
 ## Test a different target model or agent
 
+### Live Gemma 4 vs. local Llama stress and repair
+
+With `GEMINI_API_KEY` in `.env`, install the local model and run:
+
+```bash
+ollama pull llama3.2:3b
+python -m deploy_and_benchmarks.live_stress --env-file .env --output reports/live-stress.json
+```
+
+This uses live Gemma 4 for two fresh attacks, judging and up to three prompt repairs. Llama receives three fixed probes plus the generated attacks in fresh sessions. Every repair replays the full suite and checks legitimate and expired refund requests. Repairs combine a candidate prompt with Ollama's native JSON Schema decoding, temperature 0 and three business examples using different amounts and delivery ages from the probes; each round records those settings. Raw target responses are retained without cleaning or replacing them. Strict JSON, field types, refund limits and confidential-token checks supplement the model judge. The benchmark token stays local and is redacted from evidence sent to Google.
+
+Progress and partial results are saved after each response. A successful run writes `reports/live-stress.prompt.txt` and `reports/live-stress.target.json`; adopt both the prompt and decoding settings together. `--resume` continues the saved output after a provider error without rerunning completed probes. `--replay-report previous-report.json` reuses the exact earlier probes; add `--reuse-baseline` to reuse its failed baseline for the same target model. Exit codes are 0 for all observed checks passing, 1 for remaining failures and 2 for configuration/provider errors. Reports are ignored by Git.
+
+Open the dashboard with the measured repair and its runtime settings:
+
+```bash
+python -m deploy_and_benchmarks.dashboard --env-file .env --live-report reports/live-stress.json
+```
+
+The repaired Llama target appears first in the target list. Additional attacks still make live calls; a previous passing suite does not predetermine their results.
+
 The local Llama refund scenario is also available through the shared runner. With Ollama running and the model installed, use:
 
 ```bash

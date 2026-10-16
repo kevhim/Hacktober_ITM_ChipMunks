@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import os
+import json
 from typing import Callable, Literal, Protocol
 
 from pydantic import BaseModel
 
-from deploy_and_benchmarks.provider_router import ProviderRouter, ProviderType
+from deploy_and_benchmarks.provider_router import Message, ProviderRouter, ProviderType
 
 
 class TargetResponse(BaseModel):
@@ -24,13 +25,25 @@ class Target(Protocol):
 class ModelTarget:
     """Call a model with a fresh system/user conversation on every probe."""
 
-    def __init__(self, provider: ProviderRouter):
+    def __init__(self, provider: ProviderRouter, *, temperature: float = 0.7, examples: list | None = None):
         if provider.active_provider == ProviderType.MOCK:
             raise ValueError("ModelTarget requires a live provider; use DemonstrationTarget offline")
         self.provider = provider
+        self.temperature = temperature
+        self.examples = examples or []
+        if any(not isinstance(pair, (list, tuple)) or len(pair) != 2 or
+               any(not isinstance(text, str) or not text.strip() for text in pair) for pair in self.examples):
+            raise ValueError("Target examples must be nonempty user/assistant text pairs")
 
     def generate(self, system_prompt: str, user_prompt: str) -> TargetResponse:
-        response = self.provider.generate(user_prompt, system_instruction=system_prompt)
+        if self.examples:
+            messages = [Message("system", system_prompt)]
+            for user, assistant in self.examples:
+                messages.extend([Message("user", user), Message("assistant", assistant)])
+            messages.append(Message("user", user_prompt))
+            response = self.provider.generate_chat(messages, temperature=self.temperature)
+        else:
+            response = self.provider.generate(user_prompt, system_instruction=system_prompt, temperature=self.temperature)
         if response.provider == ProviderType.MOCK:
             raise RuntimeError("Live target unexpectedly returned a mock response")
         return TargetResponse(
@@ -74,11 +87,17 @@ def create_target(
     if endpoint:
         if not model:
             raise ValueError("Set TARGET_MODEL or --target-model for the target endpoint")
+        configured_format = os.getenv("TARGET_RESPONSE_FORMAT")
+        response_format = json.loads(configured_format) if configured_format else None
+        if response_format is not None and not isinstance(response_format, dict):
+            raise ValueError("TARGET_RESPONSE_FORMAT must be a JSON object")
         return ModelTarget(ProviderRouter(
             gemini_api_key="", cloud_endpoint=endpoint,
             cloud_key=os.getenv("TARGET_API_KEY", ""), cloud_model=model,
             force_mock=False, require_live=True,
-        ))
+            cloud_response_format=response_format,
+        ), temperature=float(os.getenv("TARGET_TEMPERATURE") or "0.7"),
+           examples=json.loads(os.getenv("TARGET_EXAMPLES") or "[]"))
     if os.getenv("TARGET_AGENT_URL"):
         from harness.target_agent import TargetAgent
         return TargetAgent("", model_name=model, target_url=os.getenv("TARGET_AGENT_URL"))
