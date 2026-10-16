@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 dependencies = [
-  "google-genai>=1.0.0", "pydantic>=2.0.0", "rich>=13.7.0",
+  "google-genai>=2.31.0", "pydantic>=2.0.0", "rich>=13.7.0",
   "python-dotenv>=1.0.0", "requests>=2.31.0", "chardet>=3.0.2,<6.0.0",
 ]
 
@@ -21,6 +21,7 @@ test = ["pytest>=8.0.0"]
 chaos-harness = "harness.cli:main"
 chaos-demo = "deploy_and_benchmarks.run_demo:main"
 chaos-dashboard = "deploy_and_benchmarks.dashboard:main"
+chaos-live = "deploy_and_benchmarks.live_stress:main"
 
 [tool.setuptools.packages.find]
 include = ["harness*", "deploy_and_benchmarks*"]

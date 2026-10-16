@@ -24,7 +24,11 @@ def model_server():
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             state["calls"].append((self.path, payload))
             webhook = "prompt" in payload
-            system, user = (payload["system_prompt"], payload["prompt"]) if webhook else [message["content"] for message in payload["messages"]]
+            if webhook:
+                system, user = payload["system_prompt"], payload["prompt"]
+            else:
+                system = next(message["content"] for message in payload["messages"] if message["role"] == "system")
+                user = next(message["content"] for message in reversed(payload["messages"]) if message["role"] == "user")
             if state["fail"]:
                 self.send_error(503)
                 return
@@ -186,3 +190,51 @@ def test_google_transport_keeps_roles_and_requested_model(monkeypatch):
     assert captured[0]["model"] == "requested-model"
     assert captured[0]["config"].system_instruction == "Keep support role"
     assert [content.role for content in captured[0]["contents"]] == ["user", "model", "user"]
+
+
+def test_gemma_four_uses_minimal_thinking_and_bounded_retries(monkeypatch):
+    from types import SimpleNamespace
+    from deploy_and_benchmarks import provider_router
+    captured = {}
+    def generate_content(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(text="READY", usage_metadata=None)
+    def client(**kwargs):
+        captured["http_options"] = kwargs["http_options"]
+        return SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    monkeypatch.setattr(provider_router.genai, "Client", client)
+    router = ProviderRouter(gemini_api_key="fake-key", gemma_model="gemma-4-26b-a4b-it", force_mock=False)
+    router.generate("Connectivity check")
+    assert captured["config"].thinking_config.thinking_level.value.lower() == "minimal"
+    assert captured["http_options"].retry_options.attempts == 2
+    assert 504 in captured["http_options"].retry_options.http_status_codes
+
+
+def test_structured_target_sends_schema_and_temperature_to_server(model_server):
+    from deploy_and_benchmarks.live_stress import REFUND_RESPONSE_FORMAT
+    from harness.targets import ModelTarget
+    router = ProviderRouter(
+        gemini_api_key="", cloud_endpoint=model_server["endpoint"], cloud_key="",
+        cloud_model="llama-test", force_mock=False, require_live=True,
+        cloud_response_format=REFUND_RESPONSE_FORMAT,
+    )
+    target = ModelTarget(router, temperature=0)
+    response = target.generate("Refund policy", "Please refund")
+    assert response.source == "live"
+    payload = model_server["calls"][0][1]
+    assert payload["response_format"] == REFUND_RESPONSE_FORMAT
+    assert payload["temperature"] == 0
+
+
+def test_business_examples_are_fresh_chat_turns_on_every_target_call(model_server):
+    from harness.targets import ModelTarget
+    router = ProviderRouter(gemini_api_key="", cloud_endpoint=model_server["endpoint"], cloud_key="",
+                            cloud_model="llama-test", force_mock=False, require_live=True)
+    target = ModelTarget(router, examples=[["Example request", "Example response"]])
+    target.generate("Refund policy", "First real request")
+    target.generate("Refund policy", "Second real request")
+    first, second = [call[1]["messages"] for call in model_server["calls"]]
+    assert [turn["role"] for turn in second] == ["system", "user", "assistant", "user"]
+    assert first[:-1] == second[:-1]
+    assert second[-1]["content"] == "Second real request"
+    assert "First real request" not in str(second)
