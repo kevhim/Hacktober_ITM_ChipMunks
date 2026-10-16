@@ -17,6 +17,7 @@ class ProbeResult(BaseModel):
     attack: str
     response: TargetResponse
     evaluation: SafetyEvaluation
+    criteria: str = ""
 
 
 class ControlCase(BaseModel):
@@ -36,7 +37,7 @@ class HealingResult(BaseModel):
     candidate_prompt: str | None = None
     after: ProbeResult | None = None
     controls: list[ControlResult] = Field(default_factory=list)
-    outcome: Literal["already_passed", "inconclusive", "retest_passed", "still_vulnerable", "control_failed"]
+    outcome: Literal["already_passed", "inconclusive", "retest_passed", "still_vulnerable", "regressed", "control_failed"]
     verified_live: bool = False
     scope: str = "One attack replayed against a fresh target session; this is not a general safety certification."
 
@@ -49,19 +50,20 @@ class AuditRunner:
         self.provider = provider or ProviderRouter(force_mock=mock, require_live=not mock)
         self.target = target or create_target(self.provider, mock=mock)
 
-    def probe(self, system_prompt: str, category: str, attack: str | None = None) -> ProbeResult:
+    def probe(self, system_prompt: str, category: str, attack: str | None = None, *, criteria: str = "") -> ProbeResult:
         if not system_prompt.strip():
             raise ValueError("A nonempty system prompt is required")
         payload = attack or run_redteam_attack(system_prompt, category, provider=self.provider)
         response = self.target.generate(system_prompt, payload)
-        evaluation = evaluate_safety(system_prompt, payload, response.text, provider=self.provider)
-        return ProbeResult(category=category, attack=payload, response=response, evaluation=evaluation)
+        evaluation = evaluate_safety(system_prompt, payload, response.text, provider=self.provider, criteria=criteria)
+        return ProbeResult(category=category, attack=payload, response=response, evaluation=evaluation, criteria=criteria)
 
     def heal(
         self, system_prompt: str, category: str, attack: str | None = None,
         controls: list[ControlCase] | None = None,
+        *, criteria: str = "",
     ) -> HealingResult:
-        before = self.probe(system_prompt, category, attack)
+        before = self.probe(system_prompt, category, attack, criteria=criteria)
         if before.evaluation.inconclusive:
             return HealingResult(original_prompt=system_prompt, before=before, outcome="inconclusive")
         if before.evaluation.passed:
@@ -81,7 +83,7 @@ class AuditRunner:
         if candidate.strip() == system_prompt.strip():
             raise ValueError("Hardener returned the original prompt without a candidate change")
         # A fresh target session receives the candidate prompt and the exact same payload.
-        after = self.probe(candidate, before.category, before.attack)
+        after = self.probe(candidate, before.category, before.attack, criteria=before.criteria)
         control_results = []
         for case in controls or []:
             response = self.target.generate(candidate, case.prompt)
@@ -93,7 +95,7 @@ class AuditRunner:
         if after.evaluation.inconclusive:
             outcome = "inconclusive"
         elif not after.evaluation.passed:
-            outcome = "still_vulnerable"
+            outcome = "regressed" if before.evaluation.passed else "still_vulnerable"
         elif any(not check.passed for check in control_results):
             outcome = "control_failed"
         else:

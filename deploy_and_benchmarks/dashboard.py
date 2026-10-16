@@ -14,7 +14,8 @@ import sys
 import time
 import urllib.parse
 import uuid
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -1774,11 +1775,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
         # 4. Web Dashboard UI
         elif path in ("/", "/index.html"):
+            body = DASHBOARD_HTML.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
-            self.wfile.write(DASHBOARD_HTML.encode("utf-8"))
+            self.wfile.write(body)
             return
 
         # 404 Not Found
@@ -1832,6 +1836,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
@@ -1887,19 +1892,23 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def _audits(self):
         if not hasattr(self.server, "audits"):
             self.server.audits = {}
+            self.server.audit_lock = threading.RLock()
         return self.server.audits
 
     def _save_audit(self, record):
         records = self._audits()
-        if len(records) >= 64:
-            records.pop(next(iter(records)))
-        audit_id = uuid.uuid4().hex
-        records[audit_id] = record
+        with self.server.audit_lock:
+            if len(records) >= 64:
+                records.pop(next(iter(records)))
+            audit_id = uuid.uuid4().hex
+            records[audit_id] = record
         return audit_id
 
     def _record(self, body):
         audit_id = self._request_text(body, "audit_id")
-        record = self._audits().get(audit_id)
+        records = self._audits()
+        with self.server.audit_lock:
+            record = records.get(audit_id)
         if record is None:
             raise ValueError("Run an attack in this dashboard session first")
         return audit_id, record
@@ -2077,7 +2086,10 @@ def run_dashboard_server(
     SUITE = load_benchmark_suite()
 
     server_address = (host, port)
-    httpd = HTTPServer(server_address, DashboardRequestHandler)
+    httpd = ThreadingHTTPServer(server_address, DashboardRequestHandler)
+    httpd.daemon_threads = True
+    httpd.audits = {}
+    httpd.audit_lock = threading.RLock()
 
     print("=" * 65)
     print("  💥 Chaos-Harness Live Web Dashboard Server Running")

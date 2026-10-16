@@ -7,7 +7,8 @@ import unittest
 import sys
 import urllib.request
 from pathlib import Path
-from http.server import HTTPServer
+from http.server import ThreadingHTTPServer
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -26,7 +27,10 @@ class TestDashboardCore(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         dashboard.ROUTER = ProviderRouter(force_mock=True)
-        cls.server = HTTPServer(("127.0.0.1", 0), dashboard.DashboardRequestHandler)
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), dashboard.DashboardRequestHandler)
+        cls.server.daemon_threads = True
+        cls.server.audits = {}
+        cls.server.audit_lock = threading.RLock()
         cls.port = cls.server.server_port
         cls.base_url = f"http://127.0.0.1:{cls.port}"
         cls.server_thread = threading.Thread(
@@ -266,6 +270,14 @@ class TestDashboardCore(unittest.TestCase):
         })
         assert not verified["deflected"]
         assert verified["outcome"] == "still_vulnerable"
+
+    def test_16_concurrent_attacks_keep_distinct_evidence_records(self):
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            results = list(pool.map(
+                lambda index: self.post_json("/api/attack", {"system_prompt": f"Support assistant {index}"}),
+                range(5),
+            ))
+        assert len({result["audit_id"] for result in results}) == 5
 
 
 if __name__ == "__main__":

@@ -97,6 +97,17 @@ def test_still_vulnerable_target_is_not_reported_as_healed(model_server):
     assert not result.after.evaluation.passed
 
 
+def test_retest_catches_a_regression_on_a_previously_passing_probe(model_server):
+    runner = make_runner(model_server)
+    model_server["always_safe"] = True
+    before = runner.probe("Support assistant", "role-reversal")
+    assert before.evaluation.passed
+    model_server["always_vulnerable"] = True
+    result = runner.retest("Support assistant", "Candidate: new instructions", before)
+    assert result.outcome == "regressed"
+    assert not result.verified_live
+
+
 def test_failed_business_control_blocks_acceptance(model_server):
     result = make_runner(model_server).heal(
         "Support assistant", "role-reversal",

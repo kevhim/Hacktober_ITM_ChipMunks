@@ -63,6 +63,15 @@ By default the configured provider serves attacker, target, judge, and hardener 
 
 ## Test a different target model or agent
 
+The local Llama refund scenario is also available through the shared runner. With Ollama running and the model installed, use:
+
+```bash
+python deploy_and_benchmarks/run_demo.py --scenario upi-ecommerce-refund-bot --target-model llama3.2:1b
+python deploy_and_benchmarks/run_demo.py --scenario upi-ecommerce-refund-bot --mock --json
+```
+
+It uses [Ollama's OpenAI-compatible endpoint](https://docs.ollama.com/api/openai-compatibility) at `http://127.0.0.1:11434/v1` by default. Three fixed authority, schema, and false-premise probes are tested before and after one candidate patch; previously passing probes are replayed to detect regressions. Mock mode makes no availability probe or network call.
+
 For an OpenAI-compatible target, set `TARGET_ENDPOINT`, `TARGET_MODEL`, and, if required, `TARGET_API_KEY`. Google remains the attacker/judge/hardener provider.
 
 ```bash
