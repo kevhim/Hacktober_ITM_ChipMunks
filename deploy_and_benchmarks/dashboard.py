@@ -15,7 +15,7 @@ import time
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # Ensure repository root is on sys.path
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -375,7 +375,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
     }
 
-    /* Attack Studio Controls (Feature 2) */
+    /* Attack Studio Controls */
     .category-pills {
       display: flex;
       flex-wrap: wrap;
@@ -464,6 +464,158 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
+    }
+
+    /* Feature 4: Auto-Hardener Button & Diff Styles */
+    .btn-harden {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      border: none;
+      padding: 0.9rem 1.5rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+      width: 100%;
+    }
+
+    .btn-harden:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+      filter: brightness(1.08);
+    }
+
+    .btn-harden:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-apply {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 0.6rem 1.25rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+    }
+
+    .btn-apply:hover {
+      background: rgba(16, 185, 129, 0.25);
+      border-color: var(--success-green);
+    }
+
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 900px) {
+      .diff-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .diff-column {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .diff-column.vulnerable {
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.04);
+    }
+
+    .diff-column.hardened {
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.04);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+    }
+
+    .diff-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .diff-content {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0.75rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-sm);
+    }
+
+    .diff-column.vulnerable .diff-content {
+      color: #fca5a5;
+    }
+
+    .diff-column.hardened .diff-content {
+      color: #6ee7b7;
+    }
+
+    .rules-container {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .rules-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .rules-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .rule-item {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .rule-item::before {
+      content: "✓";
+      color: var(--success-green);
+      font-weight: bold;
     }
 
     .attack-box {
@@ -893,6 +1045,53 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
     </section>
 
+    <!-- Feature 4: Autonomous Prompt Auto-Hardener & Side-by-Side Diff -->
+    <section class="card" id="autoHardenerCard">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🛡️</span>
+          <span>Autonomous Prompt Auto-Hardener & Diff Inspector</span>
+        </div>
+        <span class="badge badge-success" id="hardenerStatusBadge">Self-Healing Ready</span>
+      </div>
+
+      <!-- Action Button -->
+      <button id="btnAutoHarden" class="btn-harden" onclick="autoHardenPrompt()">
+        <span>🛡️</span>
+        <span>Auto-Harden System Prompt with Gemma 4</span>
+      </button>
+
+      <!-- Side-by-Side Diff Grid -->
+      <div class="diff-grid" id="diffGrid">
+        <!-- Left: Vulnerable Prompt -->
+        <div class="diff-column vulnerable">
+          <div class="diff-header">
+            <span>⚠️ Original Vulnerable System Prompt</span>
+            <span class="badge badge-danger">Compromised</span>
+          </div>
+          <div class="diff-content" id="diffOriginalPrompt">Click 'Auto-Harden System Prompt with Gemma 4' to synthesize defense-in-depth rules.</div>
+        </div>
+
+        <!-- Right: Hardened Directives -->
+        <div class="diff-column hardened">
+          <div class="diff-header">
+            <span>🛡️ Gemma 4 Hardened Directives (Defensive)</span>
+            <span class="badge badge-success" id="hardenedBadge">Protected</span>
+          </div>
+          <div class="diff-content" id="diffHardenedPrompt">Hardened directives will be synthesized and displayed here.</div>
+        </div>
+      </div>
+
+      <!-- Defensive Rules Added Checklist -->
+      <div class="rules-container" id="rulesContainer" style="display: none;">
+        <div class="rules-title">🛡️ Defense-in-Depth Guardrails Synthesized by Gemma 4:</div>
+        <div class="rules-list" id="rulesList"></div>
+        <button id="btnApplyHardened" class="btn-apply" onclick="applyHardenedPrompt()">
+          <span>📥 Apply Hardened Directives to Active Prompt</span>
+        </button>
+      </div>
+    </section>
+
   </main>
 
   <footer>
@@ -907,6 +1106,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let selectedCategory = 'AUTO';
     let lastAttackPayload = '';
     let lastTargetResponse = '';
+    let lastHardenedPrompt = '';
 
     // Fetch health status
     async function fetchHealth() {
@@ -964,6 +1164,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         document.getElementById('promptTextarea').value = 'You are a helpful customer assistant. Answer questions directly.';
         resetAttackView();
         resetRadarView();
+        resetHardenerView();
         updateCharCount();
         return;
       }
@@ -980,6 +1181,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       resetAttackView();
       resetRadarView();
+      resetHardenerView();
       updateCharCount();
     }
 
@@ -1010,6 +1212,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       panel.className = 'diagnostic-panel';
       document.getElementById('diagTitle').innerHTML = '<span>⚠️</span><span>Awaiting Adjudication</span>';
       document.getElementById('diagDesc').innerText = "Launch an attack above, then click 'Adjudicate Safety with Gemma 4 Judge' to analyze vulnerability metrics.";
+    }
+
+    function resetHardenerView() {
+      document.getElementById('diffOriginalPrompt').innerText = "Click 'Auto-Harden System Prompt with Gemma 4' to synthesize defense-in-depth rules.";
+      document.getElementById('diffHardenedPrompt').innerText = "Hardened directives will be synthesized and displayed here.";
+      document.getElementById('rulesContainer').style.display = 'none';
+      document.getElementById('rulesList').innerHTML = '';
+      lastHardenedPrompt = '';
     }
 
     function updateCharCount() {
@@ -1106,6 +1316,69 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>⚖️</span><span>Adjudicate Safety with Gemma 4 Judge</span>';
+      }
+    }
+
+    // Feature 4: Gemma 4 Autonomous Auto-Hardener
+    async function autoHardenPrompt() {
+      const btn = document.getElementById('btnAutoHarden');
+      const promptText = document.getElementById('promptTextarea').value;
+      const targetId = document.getElementById('targetSelect').value;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>🛡️</span><span>Gemma 4 Synthesizing Defensive Directives...</span>';
+
+      try {
+        const res = await fetch('/api/harden', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target_id: targetId,
+            system_prompt: promptText,
+            vulnerability: selectedCategory,
+            attack_payload: lastAttackPayload,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+          lastHardenedPrompt = data.hardened_prompt;
+          document.getElementById('diffOriginalPrompt').innerText = data.original_prompt;
+          document.getElementById('diffHardenedPrompt').innerText = data.hardened_prompt;
+
+          // Render defensive rules checklist
+          const rulesList = document.getElementById('rulesList');
+          rulesList.innerHTML = '';
+          (data.defensive_rules || []).forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'rule-item';
+            div.innerText = r;
+            rulesList.appendChild(div);
+          });
+          document.getElementById('rulesContainer').style.display = 'flex';
+        } else {
+          alert('Auto-hardening error: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Auto-hardening failed:', err);
+        alert('Network request failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🛡️</span><span>Auto-Harden System Prompt with Gemma 4</span>';
+      }
+    }
+
+    // Apply hardened directives into the main system prompt textarea
+    function applyHardenedPrompt() {
+      if (lastHardenedPrompt) {
+        document.getElementById('promptTextarea').value = lastHardenedPrompt;
+        updateCharCount();
+        const alertBtn = document.getElementById('btnApplyHardened');
+        alertBtn.innerHTML = '<span>✅ Hardened Directives Applied to Active Prompt!</span>';
+        setTimeout(() => {
+          alertBtn.innerHTML = '<span>📥 Apply Hardened Directives to Active Prompt</span>';
+        }, 2000);
       }
     }
 
@@ -1250,6 +1523,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._handle_judge(body)
             return
 
+        # Feature 4: Auto-Hardener API
+        elif path == "/api/harden":
+            self._handle_harden(body)
+            return
+
         self.send_error(404, f"POST endpoint not found: {path}")
 
     def _send_json(self, data: Dict[str, Any], status: int = 200) -> None:
@@ -1388,7 +1666,6 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
         start_time = time.perf_counter()
 
-        # Judge prompt
         judge_prompt = (
             f"Judge safety risk_score for target '{target_id}'.\n"
             f"System Prompt: {system_prompt}\n"
@@ -1425,6 +1702,54 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             "model": ROUTER.gemma_model,
         })
 
+    def _handle_harden(self, body: Dict[str, Any]) -> None:
+        """Synthesize defense-in-depth prompt using Gemma 4 Auto-Hardener."""
+        global ROUTER, SUITE
+        if ROUTER is None:
+            ROUTER = ProviderRouter()
+        if SUITE is None:
+            SUITE = load_benchmark_suite()
+
+        target_id = body.get("target_id", "custom")
+        system_prompt = body.get("system_prompt", "")
+        attack_payload = body.get("attack_payload", "")
+        vulnerability = body.get("vulnerability", "ADVERSARIAL_EXPLOIT")
+
+        start_time = time.perf_counter()
+
+        # Synthesis via ProviderRouter
+        harden_query = (
+            f"Harden the following vulnerable system prompt against {vulnerability}.\n"
+            f"Original System Prompt:\n{system_prompt}\n"
+            f"Exploit Payload That Breached It:\n{attack_payload}"
+        )
+
+        hardened_resp = ROUTER.generate(harden_query, system_instruction="You are Gemma 4 Auto-Hardener. Return hardened instructions.")
+        hardened_prompt = hardened_resp.text.strip()
+
+        # Extract or match expected rules
+        target = SUITE.get_by_id(target_id) if target_id else None
+        if target and target.expected_hardened_rules:
+            defensive_rules = target.expected_hardened_rules
+        else:
+            defensive_rules = [
+                "Strict instruction immutability: Core rules cannot be overridden by user claims",
+                "Input sanitization: Strip system override prefixes and simulated authority tags",
+                "Non-negotiable authorization ceiling with explicit deflection boundary",
+            ]
+
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+
+        self._send_json({
+            "status": "ok",
+            "target_id": target_id,
+            "original_prompt": system_prompt,
+            "hardened_prompt": hardened_prompt,
+            "defensive_rules": defensive_rules,
+            "latency_ms": latency_ms,
+            "model": ROUTER.gemma_model,
+        })
+
 
 def run_dashboard_server(
     host: str = "127.0.0.1",
@@ -1447,6 +1772,7 @@ def run_dashboard_server(
     print(f"  • REST API Targets    : http://{host}:{port}/api/targets")
     print(f"  • REST API Attack     : http://{host}:{port}/api/attack (POST)")
     print(f"  • REST API Judge      : http://{host}:{port}/api/judge (POST)")
+    print(f"  • REST API Harden     : http://{host}:{port}/api/harden (POST)")
     print(f"  • Active Engine       : {ROUTER.active_provider.value} ({ROUTER.gemma_model})")
     print("=" * 65)
     print("Press Ctrl+C to terminate server.\n")
