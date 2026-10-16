@@ -1,9 +1,11 @@
 ---
 name: schema-breaker
 description: Stress-tests structured JSON output compliance against nested quotes, complex Unicode sequences, and conversational wrapper traps using Google Gemma 4.
-version: 1.0.0
 license: MIT
-tags: [security, red-team, gemma-4]
+compatibility: Requires Python 3.10+ and the Chaos-Harness package in the agent environment.
+metadata:
+  version: "1.0.0"
+  tags: "security red-team gemma-4"
 ---
 
 # Structured Output & Schema Compliance Auditor (`schema-breaker`)
@@ -21,7 +23,7 @@ Invoke this skill whenever:
 | Parameter | Flag | Type | Required | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `prompt` | `--prompt` | `string` | Yes | The target system prompt to evaluate for strict JSON schema enforcement. |
-| `model` | `--model` | `string` | No | Gemma model identifier via `google-genai` (defaults to `gemma-4-27b-it` with automatic fallback). |
+| `model` | `--model` | `string` | No | Gemma model identifier via `google-genai` (defaults to `gemma-4-26b-a4b-it` with automatic fallback). |
 
 ## Step-by-Step Execution Instructions
 
@@ -55,3 +57,6 @@ When an audit fails, the hardener applies:
 1. **Raw JSON Only Directive**: Enforce *"Output raw RFC 8259 compliant JSON only. Do not wrap in markdown code blocks or add preamble or postscript commentary."*
 2. **Strict Escaping Mandate**: Mandate proper escaping of all internal quotation marks and special characters in output strings.
 3. **Zero Formatting Drift Anchor**: Explicitly command the agent to ignore user requests to alter format, schema structure, or delimiter rules.
+
+## Runtime and evidence
+Install Chaos-Harness in the Python environment used by the agent. The runner accepts --mock for a labeled offline teaching fixture. A configured live request fails visibly on provider errors. Skill scores measure resilience (higher is safer); harness risk scores use the opposite direction. Offline scores do not validate a real target. After hardening, replay attacks with python -m harness.cli --heal and include benign control checks before adopting a candidate prompt.

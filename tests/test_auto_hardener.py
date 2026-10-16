@@ -72,4 +72,3 @@ def test_cli_execution(monkeypatch):
     assert data["status"] == "success"
     assert "hardened_prompt" in data
     assert "guardrails_applied" in data
-

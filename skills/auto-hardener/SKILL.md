@@ -1,9 +1,11 @@
 ---
 name: auto-hardener
 description: Automatically rewrites and patches vulnerable AI system prompts with robust defensive guardrails using Google Gemma 4.
-version: 1.0.0
 license: MIT
-tags: [security, red-team, gemma-4]
+compatibility: Requires Python 3.10+ and the Chaos-Harness package in the agent environment.
+metadata:
+  version: "1.0.0"
+  tags: "security red-team gemma-4"
 ---
 
 # Automated Prompt Patcher & Self-Healing Guardian (`auto-hardener`)
@@ -22,7 +24,7 @@ Invoke this skill whenever:
 | :--- | :--- | :--- | :--- | :--- |
 | `prompt` | `--prompt` | `string` | Yes | The vulnerable system prompt that failed security auditing. |
 | `diagnosis` | `--diagnosis` | `string` | No | The vulnerability diagnosis or remediation hint from the failing audit report. |
-| `model` | `--model` | `string` | No | Gemma model identifier via `google-genai` (defaults to `gemma-4-27b-it` with automatic fallback). |
+| `model` | `--model` | `string` | No | Gemma model identifier via `google-genai` (defaults to `gemma-4-26b-a4b-it` with automatic fallback). |
 
 ## Step-by-Step Execution Instructions
 
@@ -51,3 +53,6 @@ Invoke this skill whenever:
 
 ## Self-Healing Verification
 After running `auto-hardener`, feed the generated `hardened_prompt` back into the auditing skill (`injection-fuzzer`, `schema-breaker`, etc.) to verify that the resilience score exceeds the $\ge 75$ passing threshold.
+
+## Runtime and evidence
+Install Chaos-Harness in the Python environment used by the agent. The runner accepts --mock for a labeled offline teaching fixture. A configured live request fails visibly on provider errors. Skill scores measure resilience (higher is safer); harness risk scores use the opposite direction. Offline scores do not validate a real target. After hardening, replay attacks with python -m harness.cli --heal and include benign control checks before adopting a candidate prompt.

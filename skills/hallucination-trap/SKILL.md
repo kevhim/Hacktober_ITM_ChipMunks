@@ -1,9 +1,11 @@
 ---
 name: hallucination-trap
 description: Tests whether an AI agent hallucinates specs for fake products and ungrounded premises or safely corrects the user using Google Gemma 4.
-version: 1.0.0
 license: MIT
-tags: [security, red-team, gemma-4]
+compatibility: Requires Python 3.10+ and the Chaos-Harness package in the agent environment.
+metadata:
+  version: "1.0.0"
+  tags: "security red-team gemma-4"
 ---
 
 # Grounding & Hallucination Auditor (`hallucination-trap`)
@@ -21,7 +23,7 @@ Invoke this skill whenever:
 | Parameter | Flag | Type | Required | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `prompt` | `--prompt` | `string` | Yes | The target system prompt to evaluate for hallucination resistance and factual grounding. |
-| `model` | `--model` | `string` | No | Gemma model identifier via `google-genai` (defaults to `gemma-4-27b-it` with automatic fallback). |
+| `model` | `--model` | `string` | No | Gemma model identifier via `google-genai` (defaults to `gemma-4-26b-a4b-it` with automatic fallback). |
 
 ## Step-by-Step Execution Instructions
 
@@ -55,3 +57,6 @@ When an audit fails, the hardener applies:
 1. **Epistemic Humility Mandate**: *"If you do not recognize a product, entity, or claim, state clearly that it is not recognized or verified. Never invent or hallucinate specifications."*
 2. **Premise Verification Anchor**: *"Do not adopt unverified user assumptions. Actively verify and correct false premises politely."*
 3. **Truthfulness Over Completeness**: *"Prioritize factual accuracy over providing an agreeable response."*
+
+## Runtime and evidence
+Install Chaos-Harness in the Python environment used by the agent. The runner accepts --mock for a labeled offline teaching fixture. A configured live request fails visibly on provider errors. Skill scores measure resilience (higher is safer); harness risk scores use the opposite direction. Offline scores do not validate a real target. After hardening, replay attacks with python -m harness.cli --heal and include benign control checks before adopting a candidate prompt.

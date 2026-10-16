@@ -42,23 +42,24 @@ class TargetAgent:
 
         Args:
             system_prompt: The instructions governing the target agent's behavior.
-            model_name: Target model identifier (e.g. 'gemini-2.5-flash', 'gemma-4-27b-it').
+            model_name: Target model identifier (e.g. 'gemini-2.5-flash', 'gemma-4-26b-a4b-it').
             target_url: Optional external HTTP webhook/API endpoint to query.
             api_key: Optional Gemini API key (defaults to GEMINI_API_KEY env var).
             force_mock: If True, bypasses live network calls and uses deterministic mock.
         """
         self.system_prompt = system_prompt
-        self.model_name = model_name or os.getenv("TARGET_MODEL", "gemini-2.5-flash")
+        self.model_name = model_name or os.getenv("TARGET_MODEL") or os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
         self.target_url = target_url or os.getenv("TARGET_AGENT_URL")
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.force_mock = force_mock
 
         self._client = None
         if not self.force_mock and self.api_key and GENAI_AVAILABLE and not self.target_url:
-            try:
-                self._client = genai.Client(api_key=self.api_key)
-            except Exception:
-                self._client = None
+            self._client = genai.Client(
+                api_key=self.api_key, http_options=types.HttpOptions(timeout=30_000)
+            )
+        if not self.force_mock and not self.target_url and self._client is None:
+            raise ValueError("Configure a live target or set force_mock=True")
 
     @property
     def is_live(self) -> bool:
@@ -70,52 +71,44 @@ class TargetAgent:
         self.system_prompt = new_system_prompt
 
     def query(self, user_message: str) -> str:
-        """Send an input probe to the target agent and capture its genuine response.
-
-        Args:
-            user_message: The adversarial attack prompt or user query.
-
-        Returns:
-            The raw text response emitted by the target agent.
-        """
-        # 1. External HTTP Webhook target
-        if not self.force_mock and self.target_url:
-            try:
-                payload = {
-                    "prompt": user_message,
-                    "system_prompt": self.system_prompt,
+        """Query the configured target. Live failures never become mock responses."""
+        if self.force_mock:
+            return self._mock_respond(user_message)
+        if self.target_url:
+            headers = {}
+            target_key = os.getenv("TARGET_API_KEY")
+            if target_key:
+                headers["Authorization"] = f"Bearer {target_key}"
+            response = requests.post(
+                self.target_url, json={
+                    "prompt": user_message, "system_prompt": self.system_prompt,
                     "model": self.model_name,
-                }
-                resp = requests.post(self.target_url, json=payload, timeout=15)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    return data.get("response") or data.get("text") or str(data)
-            except Exception:
-                pass
+                }, headers=headers, timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            text = data.get("response") or data.get("text")
+        else:
+            response = self._client.models.generate_content(
+                model=self.model_name, contents=user_message,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_prompt, temperature=0.7,
+                ),
+            )
+            text = response.text
+        if not isinstance(text, str) or not text.strip():
+            raise RuntimeError("Target returned no text")
+        return text.strip()
 
-        # 2. Live GenAI SDK Target
-        if not self.force_mock and self._client is not None:
-            try:
-                config = (
-                    types.GenerateContentConfig(
-                        system_instruction=self.system_prompt,
-                        temperature=0.7,
-                    )
-                    if types
-                    else None
-                )
-                response = self._client.models.generate_content(
-                    model=self.model_name,
-                    contents=user_message,
-                    config=config,
-                )
-                if response and response.text:
-                    return response.text.strip()
-            except Exception:
-                pass
-
-        # 3. Deterministic Mock Fallback Target
-        return self._mock_respond(user_message)
+    def generate(self, system_prompt: str, user_prompt: str):
+        """Support the shared stateless target contract while preserving query()."""
+        from harness.targets import TargetResponse
+        self.update_system_prompt(system_prompt)
+        return TargetResponse(
+            text=self.query(user_prompt), source="mock" if self.force_mock else "live",
+            provider="demonstration" if self.force_mock else "webhook" if self.target_url else "google_genai",
+            model=self.model_name,
+        )
 
     def _mock_respond(self, user_message: str) -> str:
         """Simulate realistic target agent behavior based on system prompt hardening level."""

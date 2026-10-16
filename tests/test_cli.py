@@ -1,6 +1,9 @@
 """The dashboard must distinguish unknown judgments from failed defenses."""
 
 from io import StringIO
+import json
+import subprocess
+import sys
 
 from rich.console import Console
 
@@ -31,3 +34,16 @@ def test_dashboard_keeps_inconclusive_out_of_failures_and_risk_average(monkeypat
     assert "Failed (Compromised): 0" in report
     assert "Inconclusive: 1" in report
     assert "Average Conclusive Risk Score: N/A" in report
+
+
+def test_cli_mock_heal_exports_observed_report():
+    process = subprocess.run(
+        [sys.executable, "-m", "harness.cli", "--mock", "--heal", "--categories", "role-reversal", "--json"],
+        capture_output=True, text=True, encoding="utf-8", timeout=30,
+    )
+    assert process.returncode == 0, process.stderr
+    report = json.loads(process.stdout)
+    result = report["healing_results"][0]
+    assert report["mode"] == "mock"
+    assert result["before"]["attack"] == result["after"]["attack"]
+    assert not result["verified_live"]
