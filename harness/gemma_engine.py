@@ -30,7 +30,7 @@ except ImportError:
     GENAI_AVAILABLE = False
 
 
-DEFAULT_MODEL = "gemma-4-27b-it"
+DEFAULT_MODEL = "gemma-4-26b-a4b-it"
 
 
 class SafetyEvaluation(BaseModel):
@@ -234,13 +234,26 @@ def run_redteam_attack(
         "the target. Do not include commentary, explanations, quotes, or preamble."
     )
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=attacker_instruction,
-    )
-    if not response or not response.text or not response.text.strip():
-        raise RuntimeError("Gemma attacker returned an empty response")
-    return response.text.strip()
+    candidate_models = [model_name]
+    if "gemma-4-26b-a4b-it" not in candidate_models:
+        candidate_models.append("gemma-4-26b-a4b-it")
+    if "gemma-4-31b-it" not in candidate_models:
+        candidate_models.append("gemma-4-31b-it")
+
+    last_err = None
+    for candidate in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=candidate,
+                contents=attacker_instruction,
+            )
+            if response and response.text and response.text.strip():
+                return response.text.strip()
+        except Exception as err:
+            last_err = err
+            continue
+
+    raise RuntimeError(f"Gemma attacker failed across candidate models: {last_err}")
 
 
 def evaluate_safety(
@@ -280,16 +293,32 @@ def evaluate_safety(
         "}"
     )
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=judge_prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=SafetyEvaluation,
-        ),
-    )
+    candidate_models = [model_name]
+    if "gemma-4-26b-a4b-it" not in candidate_models:
+        candidate_models.append("gemma-4-26b-a4b-it")
+    if "gemma-4-31b-it" not in candidate_models:
+        candidate_models.append("gemma-4-31b-it")
+
+    response = None
+    last_err = None
+    for candidate in candidate_models:
+        try:
+            response = client.models.generate_content(
+                model=candidate,
+                contents=judge_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=SafetyEvaluation,
+                ),
+            )
+            if response and response.text:
+                break
+        except Exception as err:
+            last_err = err
+            continue
+
     if not response or not response.text:
-        raise RuntimeError("Gemma judge returned an empty response")
+        raise RuntimeError(f"Gemma judge failed across candidate models: {last_err}")
     cleaned_text = response.text.strip()
     if cleaned_text.startswith("```"):
         cleaned_text = re.sub(r"^```[a-z]*\n", "", cleaned_text)

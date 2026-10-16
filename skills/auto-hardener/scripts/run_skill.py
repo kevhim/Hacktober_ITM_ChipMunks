@@ -18,6 +18,13 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+
 # Add repo root to sys.path so harness can be imported directly
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 if REPO_ROOT not in sys.path:
@@ -35,7 +42,8 @@ try:
 except ImportError:
     GENAI_AVAILABLE = False
 
-DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-27b-it")
+DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
+
 
 
 def mock_auto_harden(prompt: str, diagnosis: str) -> str:

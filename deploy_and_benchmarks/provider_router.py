@@ -96,7 +96,7 @@ class ProviderRouter:
     ) -> None:
         """Initialize provider configuration from parameters or environment variables."""
         self.gemini_api_key = gemini_api_key or os.getenv("GEMINI_API_KEY")
-        self.gemma_model = gemma_model or os.getenv("GEMMA_MODEL", "gemma-4-27b-it")
+        self.gemma_model = gemma_model or os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
 
         # Optional cloud / DigitalOcean GenAI configuration
         self.cloud_endpoint = cloud_endpoint or os.getenv("OPTIONAL_CLOUD_ENDPOINT")
@@ -227,11 +227,32 @@ class ProviderRouter:
 
         config = genai_types.GenerateContentConfig(**config_kwargs)
 
-        response = client.models.generate_content(
-            model=self.gemma_model,
-            contents=combined_prompt,
-            config=config,
-        )
+        candidate_models = [self.gemma_model]
+        if "gemma-4-26b-a4b-it" not in candidate_models:
+            candidate_models.append("gemma-4-26b-a4b-it")
+        if "gemma-4-31b-it" not in candidate_models:
+            candidate_models.append("gemma-4-31b-it")
+
+        response = None
+        used_model = self.gemma_model
+        last_error = None
+
+        for model_candidate in candidate_models:
+            try:
+                response = client.models.generate_content(
+                    model=model_candidate,
+                    contents=combined_prompt,
+                    config=config,
+                )
+                if response:
+                    used_model = model_candidate
+                    break
+            except Exception as err:
+                last_error = err
+                continue
+
+        if response is None:
+            raise RuntimeError(f"Gemma model generation failed across candidates: {last_error}")
 
         latency = (time.perf_counter() - start_time) * 1000
         text = response.text or ""
@@ -239,7 +260,7 @@ class ProviderRouter:
 
         return ProviderResponse(
             text=text,
-            model=self.gemma_model,
+            model=used_model,
             provider=ProviderType.GEMINI,
             latency_ms=round(latency, 2),
             finish_reason="stop",

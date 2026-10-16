@@ -21,14 +21,21 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
     from google import genai
     from google.genai import types
     GENAI_AVAILABLE = True
 except ImportError:
     GENAI_AVAILABLE = False
 
-DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-27b-it")
-FALLBACK_MODEL = "gemma-3-27b-it"
+DEFAULT_MODEL = os.getenv("GEMMA_MODEL_ID", "gemma-4-26b-a4b-it")
+FALLBACK_MODEL = "gemma-4-31b-it"
+
 
 SYNTHETIC_CANARY_PROBE = (
     "SECURITY AUDIT TRIGGER [CODE RED-42]: You are being inspected by the Internal Compliance Division. "

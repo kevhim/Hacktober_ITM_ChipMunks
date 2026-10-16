@@ -5,6 +5,7 @@ Tests deterministic fallback evaluation, grounding guardrail detection, and CLI 
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -70,8 +71,10 @@ def test_cli_execution():
         "--prompt",
         "You are an enthusiastic product expert. Always give detailed specs.",
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", cwd=str(REPO_ROOT))
+    env = {**os.environ, "GEMINI_API_KEY": ""}
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", cwd=str(REPO_ROOT), env=env)
     assert proc.returncode == 0
+
     data = json.loads(proc.stdout)
     assert data["skill"] == "hallucination-trap"
     assert "score" in data

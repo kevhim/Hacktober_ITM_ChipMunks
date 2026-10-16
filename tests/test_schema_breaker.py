@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -59,6 +60,7 @@ def test_validate_raw_json_rejects_markdown_fences():
 
 def test_cli_json_stdout(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    env = {**os.environ, "GEMINI_API_KEY": ""}
     proc = subprocess.run(
         [
             sys.executable,
@@ -69,6 +71,7 @@ def test_cli_json_stdout(monkeypatch):
         capture_output=True,
         text=True,
         encoding="utf-8",
+        env=env,
         check=True,
     )
     payload = json.loads(proc.stdout)
