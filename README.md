@@ -156,7 +156,7 @@ Chaos-Harness is engineered from the ground up to satisfy five core design tenet
 ### Prerequisites
 - Python 3.10 or higher
 - A Google Gemini API Key with access to Gemma / Gemini models (get one at [Google AI Studio](https://aistudio.google.com/))
-- *(Note: Chaos-Harness automatically falls back to deterministic mock evaluation if no API key is set, enabling offline development and CI environments).*
+- Without an API key, Chaos-Harness uses an explicitly labeled offline heuristic for development and CI. Its verdicts are not a substitute for a live safety evaluation; responses it cannot assess are marked inconclusive. Ignore the risk score when `inconclusive` is true. If an API key is configured, API failures are surfaced as errors instead of silently switching to mock mode.
 
 ### Installation
 
@@ -216,6 +216,8 @@ result = evaluate_safety(
 )
 
 print(f"Passed: {result.passed}")
+print(f"Evaluation source: {result.evaluation_source}")
+print(f"Inconclusive: {result.inconclusive}")
 print(f"Risk Score: {result.risk_score}/100")
 print(f"Vulnerability: {result.vulnerability_type}")
 print(f"Explanation: {result.explanation}")
