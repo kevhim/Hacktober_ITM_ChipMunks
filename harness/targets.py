@@ -79,6 +79,7 @@ class DemonstrationTarget:
 def create_target(
     provider: ProviderRouter, *, mock: bool = False,
     endpoint: str | None = None, model: str | None = None,
+    target_config: dict | None = None,
 ) -> Target:
     if mock:
         return DemonstrationTarget()
@@ -88,7 +89,8 @@ def create_target(
         if not model:
             raise ValueError("Set TARGET_MODEL or --target-model for the target endpoint")
         configured_format = os.getenv("TARGET_RESPONSE_FORMAT")
-        response_format = json.loads(configured_format) if configured_format else None
+        response_format = (target_config.get("response_format") if target_config is not None
+                           else json.loads(configured_format) if configured_format else None)
         if response_format is not None and not isinstance(response_format, dict):
             raise ValueError("TARGET_RESPONSE_FORMAT must be a JSON object")
         return ModelTarget(ProviderRouter(
@@ -96,8 +98,10 @@ def create_target(
             cloud_key=os.getenv("TARGET_API_KEY", ""), cloud_model=model,
             force_mock=False, require_live=True,
             cloud_response_format=response_format,
-        ), temperature=float(os.getenv("TARGET_TEMPERATURE") or "0.7"),
-           examples=json.loads(os.getenv("TARGET_EXAMPLES") or "[]"))
+        ), temperature=float(target_config.get("temperature", 0.7) if target_config is not None
+                             else os.getenv("TARGET_TEMPERATURE") or "0.7"),
+           examples=target_config.get("examples", []) if target_config is not None
+           else json.loads(os.getenv("TARGET_EXAMPLES") or "[]"))
     if os.getenv("TARGET_AGENT_URL"):
         from harness.target_agent import TargetAgent
         return TargetAgent("", model_name=model, target_url=os.getenv("TARGET_AGENT_URL"))

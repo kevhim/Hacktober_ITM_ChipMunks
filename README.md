@@ -82,7 +82,7 @@ Open the dashboard with the measured repair and its runtime settings:
 python -m deploy_and_benchmarks.dashboard --env-file .env --live-report reports/live-stress.json
 ```
 
-The repaired Llama target appears first in the target list. Additional attacks still make live calls; a previous passing suite does not predetermine their results.
+Two tabs show the original failed round and the final repaired round from the same live report. Pass rates, risk scores, raw responses and business checks come from those measurements. Selecting a tab loads that round's prompt and target settings for additional live tests. Additional attacks still make live calls; a previous passing suite does not predetermine their results.
 
 The local Llama refund scenario is also available through the shared runner. With Ollama running and the model installed, use:
 
